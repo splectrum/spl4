@@ -1,0 +1,16 @@
+{
+  "name": "spl3-evaluator",
+  "version": "0.9.0",
+  "type": "module",
+  "bin": {
+    "evaluate": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "evaluate": "node dist/cli.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.2",
+    "typescript": "^5.7.0"
+  }
+}
