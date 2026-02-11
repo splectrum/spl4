@@ -1,0 +1,18 @@
+{
+  "type": "document",
+  "format": "markdown",
+  "description": "Root instructions and mission for the repository. Read by entities on first encounter to understand what this is, how to work, and where to find key resources.",
+  "structure": {
+    "required": [
+      "What This Is — identity and pillars",
+      "Mission — what this iteration aims to achieve",
+      "How We Work — working principles and entity roles",
+      "The Build Cycle — project-based progression"
+    ],
+    "optional": [
+      "Key Documents — references to principles, positioning, origins",
+      "Prior Art — references to previous iterations"
+    ]
+  },
+  "content": "Natural language. Sets tone and direction. Should be self-sufficient for orientation — an entity reading only this file understands the mission and way of working."
+}

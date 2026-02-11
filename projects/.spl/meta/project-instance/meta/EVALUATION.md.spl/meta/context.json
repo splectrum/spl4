@@ -1,0 +1,17 @@
+{
+  "type": "document",
+  "format": "markdown",
+  "description": "Fitness record for the project. Documents what was built, key decisions and their reasoning, what was learned, and what carries forward.",
+  "structure": {
+    "required": [
+      "What Was Built — concrete outcomes achieved",
+      "Key Decisions — choices made and their reasoning",
+      "What We Learned — insights from the work"
+    ],
+    "optional": [
+      "Changes Outside This Project — side effects",
+      "Carry Forward — items for future projects"
+    ]
+  },
+  "content": "Natural language. Honest assessment. Decisions should explain the why, not just the what. Learnings should be transferable."
+}

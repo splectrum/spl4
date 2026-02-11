@@ -1,18 +1,21 @@
 # Context
 
-## Current: Context Metadata
+## Current: File-Level Metadata
 
-Metadata structure (`.spl/`) with protocol mounting, addressing model, and `spl` runner. End-to-end invocation validates the design: `./spl context-view` resolves config, executes the tool, produces CONTEXT.md. Metadata conventions support descriptive data, protocol bindings, and future extensions without additional rules.
+Extending `.spl` metadata structure to file-level contexts. Defined document specs for repo-root files (CLAUDE.md, CONTEXT.md) and project instance type definitions with file-level specs for REQUIREMENTS.md and EVALUATION.md. Established uniform meta/proto schema across files, directories, and type definitions. Ready for Mycelium API work with real metadata structure in place.
 
-See projects/04-context-metadata/
+See projects/05-file-metadata/
 
 ## Completed
 
-Context View Embedding — Scan/haiccer/persist pipeline for context description generation. Embedded tool into exploratory-repo with deterministic steps and entity interpretation.
+Context View Embedding — adapted context-view tool for exploratory repos, moved working memory to .claude/rules/, established pipeline (scan → haiccer → persist)
   See projects/03-context-view/EVALUATION.md
 
-Pillar Structure — Three-pillar directories (Mycelium, Splectrum, HAICC, exploratory-repo) with vocabulary and definitions. Structure made concerns visibly distinct.
+Context Metadata — defined `.spl/` metadata structure, mounted context-view protocol, implemented `spl` runner, validated addressing model
+  See projects/04-context-metadata/EVALUATION.md
+
+Pillar Structure — organized repo into mycelium (data), splectrum (language), haicc (creative), and exploratory-repo (type) with vocabularies and definitions
   See projects/02-pillar-structure/EVALUATION.md
 
-Initialization — Extracted seed documents to root, created repo structure, installed working memory into in-repo location, removed scaffolding.
+Initialization — extracted seed documents to root, created github repo, installed working memory, established project structure
   See projects/01-initialization/EVALUATION.md

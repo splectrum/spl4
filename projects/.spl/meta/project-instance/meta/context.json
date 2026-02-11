@@ -1,0 +1,9 @@
+{
+  "type": "project-instance",
+  "accessMode": "flat",
+  "requires": [
+    { "key": "REQUIREMENTS.md", "context": "REQUIREMENTS.md.spl" },
+    { "key": "EVALUATION.md", "context": "EVALUATION.md.spl" }
+  ],
+  "allowAny": true
+}

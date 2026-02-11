@@ -1,0 +1,16 @@
+{
+  "type": "document",
+  "format": "markdown",
+  "description": "Expressed intent for the project. Defines what the project sets out to achieve, what it will deliver, and the quality gates that determine fitness.",
+  "structure": {
+    "required": [
+      "Goal — what the project aims to achieve",
+      "Deliverables — concrete outcomes",
+      "Quality Gates — checkable assertions for fitness"
+    ],
+    "optional": [
+      "Carry Forward — items deferred to future projects"
+    ]
+  },
+  "content": "Natural language. Concise, specific, evaluable. Each quality gate should be independently verifiable against the deliverables."
+}

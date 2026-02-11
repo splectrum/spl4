@@ -1,0 +1,5 @@
+{
+  "type": "project-collection",
+  "childType": "project-instance",
+  "accessMode": "flat"
+}

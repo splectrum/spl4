@@ -1,0 +1,13 @@
+{
+  "type": "document",
+  "format": "markdown",
+  "description": "Self-generated context description. Produced by the context-view protocol. Provides orientation on current state and project history.",
+  "structure": {
+    "required": [
+      "Current — headline, summary, and reference for the active project",
+      "Completed — headline and reference for each completed project"
+    ]
+  },
+  "content": "Natural language. Generated, not hand-written. Current project gets detailed summary (magnifying glass). Completed projects get headline + reference only.",
+  "generatedBy": "context-view"
+}

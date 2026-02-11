@@ -1,3 +1,7 @@
 {
-  "type": "exploratory-repo"
+  "type": "exploratory-repo",
+  "children": [
+    { "key": "CLAUDE.md", "context": "CLAUDE.md.spl" },
+    { "key": "CONTEXT.md", "context": "CONTEXT.md.spl" }
+  ]
 }
