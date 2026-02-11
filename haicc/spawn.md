@@ -11,7 +11,9 @@ make its own structural decisions.
    actual state is
 
 2. A seed is assembled: documents, reference code, and
-   working memory — information, not structure
+   working memory — information, not structure. Working
+   memory lives in `.claude/rules/` as part of the repo
+   structure (git-tracked, portable)
 
 3. Preparation is minimal — create the target, place the
    seed, add instructions for the initializing entity

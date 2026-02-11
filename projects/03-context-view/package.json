@@ -1,0 +1,16 @@
+{
+  "name": "context-view",
+  "version": "0.2.0",
+  "description": "Context description generator for exploratory repos",
+  "type": "module",
+  "bin": {
+    "context-view": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
