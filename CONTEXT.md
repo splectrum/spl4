@@ -1,11 +1,18 @@
 # Context
 
-## Current: Context View Embedding
+## Current: Context Metadata
 
-Adapting the context-view tool from reference code and embedding it into the exploratory-repo type. The tool generates context descriptions by reading CLAUDE.md, scanning projects/ for timeline and state, and producing a self-updating CONTEXT.md at repo root. This project also moves working memory into .claude/rules/ for git-tracked portability.
+Metadata structure (`.spl/`) with protocol mounting, addressing model, and `spl` runner. End-to-end invocation validates the design: `./spl context-view` resolves config, executes the tool, produces CONTEXT.md. Metadata conventions support descriptive data, protocol bindings, and future extensions without additional rules.
 
-See projects/03-context-view/
+See projects/04-context-metadata/
 
 ## Completed
 
-Pillar Structure — Defined three pillars (Mycelium, Splectrum, HAICC) with directory structure and populated with existing content. See projects/02-pillar-structure/EVALUATION.md
+Context View Embedding — Scan/haiccer/persist pipeline for context description generation. Embedded tool into exploratory-repo with deterministic steps and entity interpretation.
+  See projects/03-context-view/EVALUATION.md
+
+Pillar Structure — Three-pillar directories (Mycelium, Splectrum, HAICC, exploratory-repo) with vocabulary and definitions. Structure made concerns visibly distinct.
+  See projects/02-pillar-structure/EVALUATION.md
+
+Initialization — Extracted seed documents to root, created repo structure, installed working memory into in-repo location, removed scaffolding.
+  See projects/01-initialization/EVALUATION.md

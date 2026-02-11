@@ -65,3 +65,48 @@ A capability invocable from a context. Atomic —
 proprietary internals, compatible boundaries. The
 name is the interface. The layer stack resolves the
 implementation.
+
+## Addressing
+
+XPath-style scheme for navigating contexts, accessing
+records, and reaching metadata. Path segments traverse
+the context hierarchy. `@` accesses a record by key
+(XPath attribute syntax). `.spl` accesses the metadata
+namespace.
+
+## Path Segment
+
+One step in a context path. Each segment crosses a
+context boundary where traversal accumulates metadata.
+
+    /repo/projects/03-context-view
+
+## Key Access (@)
+
+Accesses a record by key within a context. Does not
+traverse into the record.
+
+    /repo/projects/@REQUIREMENTS.md
+
+## .spl Namespace
+
+The metadata namespace for a context. Contains
+descriptive metadata (`.spl/meta/`) and protocol
+bindings (`.spl/proto/`). For contexts: `.spl/`
+directory inside. For records: `.spl` suffix as
+sibling. Logically uniform — the capability layer
+handles the physical difference.
+
+## Protocol
+
+A named capability interface bound to a context.
+Protocol name is the key, capability binding is the
+value. Lives in `.spl/proto/`. Invoked via the `spl`
+runner — named mode resolves at a target context,
+fully qualified mode carries the context in the path.
+
+## Data View
+
+Everything outside `.spl` is data. Filter out `.spl`
+to obtain a clean data picture. One convention, one
+filter.

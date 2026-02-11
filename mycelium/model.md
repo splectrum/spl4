@@ -8,8 +8,8 @@ of where or how data is physically stored or transmitted.
 
 **Record** = key → content (opaque bytes).
 
-**Context** = container of records. Records can
-themselves be contexts.
+**Context** = bounded area that contains data structures.
+Records can themselves be contexts.
 
 Keys are meaningful only within their containing context.
 Content is opaque — the model does not interpret it.
