@@ -1,21 +1,24 @@
 # Context
 
-## Current: File-Level Metadata
+## Current: Bootstrap Chain
 
-Extending `.spl` metadata structure to file-level contexts. Defined document specs for repo-root files (CLAUDE.md, CONTEXT.md) and project instance type definitions with file-level specs for REQUIREMENTS.md and EVALUATION.md. Established uniform meta/proto schema across files, directories, and type definitions. Ready for Mycelium API work with real metadata structure in place.
+Implementing the Mycelium bootstrap chain. Boot mc.proto resolves protocols using direct file access. mc.xpath resolves locations. spl orchestrates: boot mc.proto → mc.xpath → context-view invocation. Proves the bootstrap architecture end to end.
 
-See projects/05-file-metadata/
+See projects/06-mycelium-api/
 
 ## Completed
 
-Context View Embedding — adapted context-view tool for exploratory repos, moved working memory to .claude/rules/, established pipeline (scan → haiccer → persist)
+Context View Embedding — embedded context-view tool into exploratory-repo type with scan/haiccer/persist pipeline and moved memory to git-tracked .claude/rules/
   See projects/03-context-view/EVALUATION.md
 
-Context Metadata — defined `.spl/` metadata structure, mounted context-view protocol, implemented `spl` runner, validated addressing model
+Context Metadata — defined `.spl/` metadata structure, protocol mounting, addressing model, and spl runner for protocol invocation
   See projects/04-context-metadata/EVALUATION.md
 
-Pillar Structure — organized repo into mycelium (data), splectrum (language), haicc (creative), and exploratory-repo (type) with vocabularies and definitions
+File-Level Metadata — extended `.spl/` structure to file-level contexts and project instance type definitions
+  See projects/05-file-metadata/EVALUATION.md
+
+Pillar Structure — created four top-level buckets (mycelium, splectrum, haicc, exploratory-repo) with vocabulary and content for each
   See projects/02-pillar-structure/EVALUATION.md
 
-Initialization — extracted seed documents to root, created github repo, installed working memory, established project structure
+Initialization — initialized spl4 from seed, created git repo (splectrum/spl4), placed documents, separated reference code, installed working memory
   See projects/01-initialization/EVALUATION.md

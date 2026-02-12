@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-proto="${1:?protocol name required}"
-shift
-
-entry=".spl/proto/${proto}/config.json"
-[ -f "$entry" ] || { echo "spl: no ${entry}" >&2; exit 1; }
-
-run=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('${entry}','utf-8')).run)")
-exec $run "$@"
+export SPL_ROOT=$(git rev-parse --show-toplevel)
+exec node "$SPL_ROOT/.spl/spl.mjs" "$@"
