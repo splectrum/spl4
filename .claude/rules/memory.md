@@ -76,13 +76,25 @@
 - Caller's context unchanged after invocation returns
 - mc.xpath must support context-relative paths for rebasing
 
+### Protocol stack (established project 07)
+- mc.xpath — resolve paths to Locations (stateless)
+- mc.core — five primitives: list, read, create, update, del
+  Buffer in/out. The stable contract that doesn't grow.
+- mc.raw — delegates to mc.core, adds format layer
+  (utf-8, JSON on read; type detection on write).
+  Future: compound ops (move, copy). Pre-semantic.
+- mc.proto — proper: uses mc.core.read for config resolution
+  boot: direct file access, used once at startup
+
+Three layers: primitives (mc.core) → richer structural
+(mc.raw) → semantic (mc.data/mc.meta/mc.proto)
+
 ### Bootstrap
 - spl invoked at repo root, sets SPL_ROOT from git
 - Boot mc.proto: the ONE bootstrap protocol, direct file
   access, assumes filesystem + root
-- Boot resolves all other mc bundles
-- Proper mc.proto replaces boot once mc.raw exists
-  (uses mc.raw, substrate-agnostic)
+- Boot resolves proper mc.proto (one-time), then proper
+  mc.proto handles all subsequent resolution
 - Boot restrictions don't leak into running system
 
 ### spl boundary
@@ -97,7 +109,10 @@
 
 ## Deployed Code
 - `.spl/proto/mc.proto/boot.js` — boot protocol resolve
+- `.spl/proto/mc.proto/resolve.js` — proper resolve (via mc.core)
 - `.spl/proto/mc.xpath/resolve.js` — location resolver
+- `.spl/proto/mc.core/core.js` — five primitives
+- `.spl/proto/mc.raw/raw.js` — format layer on mc.core
 - `.spl/spl.mjs` — bootstrap chain logic
 - `spl` — bash wrapper (sets SPL_ROOT, exec node)
 
@@ -106,10 +121,11 @@
 - `reference/context-layer/` — flat API, traversal, storage capabilities (from spl3/08)
 - `reference/evaluator/` — requirements evaluation pipeline (from spl3/09)
 
-## Carry Forward (from project 06)
-- mc.raw — five stateless operations
-- Proper mc.proto — replaces boot, uses mc.raw
-- Namespace filters (mc.data, mc.meta) on mc.raw
+## Carry Forward (from project 07)
+- mc.raw compound operations (move, copy)
+- Namespace filters (mc.data, mc.meta) on mc.core
+- Ancestor chain resolution in mc.proto
+- Scope isolation / path rebasing
 - Session formalisation (root + cwd as object)
 - Protocol config schema
 - Documentation consolidation pass (after core bundle complete)
