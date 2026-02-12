@@ -2,6 +2,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { execSync } from 'child_process';
 import { formatScan } from './scan.js';
+
 const PROMPT_TEMPLATE = `Generate a context description from the scan data below.
 
 Output ONLY the raw markdown content. No code fences, no
@@ -32,22 +33,29 @@ Rules:
 - Completed projects get headline + reference only
 - No vocabulary sections, no reading order, no intro
 `;
+
 /** Produce the haiccer prompt */
 export function buildPrompt(result) {
-    const scan = formatScan(result);
-    return `${PROMPT_TEMPLATE}\n---\n\n${scan}`;
+  const scan = formatScan(result);
+  return `${PROMPT_TEMPLATE}\n---\n\n${scan}`;
 }
-/** Write prompt to a file in .eval/ transient context */
-export function writePrompt(root, prompt) {
-    const evalDir = join(root, '.context-view');
-    if (!existsSync(evalDir))
-        mkdirSync(evalDir, { recursive: true });
-    const promptPath = join(evalDir, 'prompt.md');
-    writeFileSync(promptPath, prompt);
-    return promptPath;
+
+/** Write prompt to .context-view/ transient directory */
+export function writePrompt(prompt) {
+  const root = process.env.SPL_ROOT;
+  const evalDir = join(root, '.context-view');
+  if (!existsSync(evalDir))
+    mkdirSync(evalDir, { recursive: true });
+  const promptPath = join(evalDir, 'prompt.md');
+  writeFileSync(promptPath, prompt);
+  return promptPath;
 }
+
 /** Invoke the haiccer (claude CLI) and return the result */
 export function invoke(promptPath) {
-    const result = execSync(`cat "${promptPath}" | claude --print --model haiku`, { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
-    return result.trim();
+  const result = execSync(
+    `cat "${promptPath}" | claude --print --model haiku`,
+    { encoding: 'utf-8', maxBuffer: 1024 * 1024 }
+  );
+  return result.trim();
 }

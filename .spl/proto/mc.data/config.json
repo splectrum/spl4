@@ -1,0 +1,4 @@
+{
+  "module": ".spl/proto/mc.data/data.js",
+  "help": "User data view — excludes .spl"
+}
