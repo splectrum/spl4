@@ -60,11 +60,21 @@
 - cwd: current position relative to root (Mycelium's cd)
 - Protocols pick up session context, don't create their own
 
-### Global vs local
-- mc bundles (mc.xpath, mc.raw, mc.data, mc.meta, mc.proto)
-  are global — same implementation everywhere, at repo root
-- Local protocols (changelog, etc.) per-context in .spl/proto/
-- Same resolution mechanism for both
+### Protocol resolution — ancestor chain
+- mc.proto.resolve walks current → parent → ... → root
+- Nearest distance wins. No separate global/local concept.
+- Static = found at current context (code lives here)
+- Dynamic = found via ancestor walk (inherited)
+- Override by registering closer — shadows ancestor's version
+- Protocol executes at its registration context (static loc)
+- Forward scope: registration determines data boundary (subtree)
+
+### Scope isolation (critical)
+- Every protocol invocation is a scope boundary
+- Paths rebased automatically at boundary (both ways)
+- Scope switch fully internal, never leaks to caller
+- Caller's context unchanged after invocation returns
+- mc.xpath must support context-relative paths for rebasing
 
 ### Bootstrap
 - spl invoked at repo root, sets SPL_ROOT from git

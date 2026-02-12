@@ -134,20 +134,104 @@ type in the parent determines what can be created.
 
 All stateless. All receive session/root as parameter.
 
-## Global vs Local Protocols
+## Protocol Resolution — Ancestor Chain
 
-**mc bundles (global):**
-- mc.xpath, mc.raw, mc.data, mc.meta, mc.proto
-- Same implementation everywhere in the repo
-- Branch = version boundary
-- Base-level data handling must be consistent
-- Registered at repo root in .spl/proto/
+mc.proto.resolve walks the ancestor chain: current
+context → parent → grandparent → ... → root. First
+match wins (nearest distance).
 
-**Local protocols (changelog, etc.):**
-- Registered per-context in .spl/proto/
-- Resolved via mc.proto at runtime
-- Different implementations valid at different contexts
-- When invoked, have mc bundles available to do their work
+**Static vs dynamic:**
+- Found at current context = static (code lives here)
+- Found via ancestor walk = dynamic (inherited)
+
+**No separate global/local concept.** mc bundles at root
+are found from anywhere — naturally "global." Override
+by registering closer — naturally "local." Same mechanism.
+
+**Execution context:**
+- Protocol runs at its static location (where registered)
+- Working directory = registration context
+- Forward scope only: protocol sees its subtree, not ancestors
+- Registration determines data boundary
+
+**Path rebasing:**
+- Caller works in their frame (invocation context)
+- Protocol works in its frame (registration context)
+- Paths rebased automatically at invocation boundary
+- Caller's context unchanged after protocol returns
+
+### Scope Isolation
+
+Every protocol invocation is a scope boundary.
+
+When a protocol at /projects/06/ calls mc.core.list('/src'):
+- Entering: /src rebased from caller's frame (/projects/06/)
+  to mc.core's frame (root) → /projects/06/src
+- Executing: mc.core works entirely in root frame
+- Returning: results rebased back to caller's frame
+- After: caller still at /projects/06/. Nothing leaked.
+
+The scope switch is fully internal to the invocation.
+Protocols are unaware of the caller's scope. The
+invocation layer handles rebasing bidirectionally
+(in and out), uniformly at every level.
+
+This happens at every protocol-to-protocol call:
+project protocol → mc.core, mc.core → mc.xpath,
+local changelog → mc.raw. Same boundary mechanism
+everywhere.
+
+mc.xpath must understand context-relative paths,
+not just root-relative. This is a natural extension
+needed for rebasing to work.
+
+### Path Semantics
+
+Two distinct path contexts:
+
+**At invocation (caller side):** relative paths. The
+caller doesn't know where the protocol lives. Paths
+are relative to the caller's context. Rebasing at
+the invocation boundary translates them.
+
+**Inside execution (protocol side):** absolute from
+the protocol's own root. The registration context IS
+the root. /src inside a protocol at /projects/06/
+means /projects/06/src — but the protocol writes /src.
+
+**Design invariant:** every protocol reasons from a
+root node, under all circumstances. A protocol at
+repo root and one at /projects/06/ write the same
+code — absolute paths from their root. The scope
+isolation guarantees this. No special cases, no
+"where am I?" conditionals.
+
+This is the context model expressed through protocols:
+every context is a potential root. Protocols are written
+against "a root," not "the repo root."
+
+### Scope and References
+
+- **Forward scope (own subtree):** read-write. The
+  protocol's persistent domain.
+- **Cascading references (remote contexts):** read-only.
+  Data the protocol needs but doesn't own. Immutable
+  views of external data projected into the protocol's
+  frame.
+- **Persistent effects stay within registration scope.**
+  No writes leaking through references into contexts
+  the protocol doesn't own. Read wide, write local.
+
+Reference setup is a declaration of data dependencies:
+the protocol needs to see these external contexts.
+The scope boundary enforces that seeing ≠ modifying.
+
+Future: visibility scope may be distance-based.
+Local copy, visible within static protocol scope,
+visible globally within repo. What you see depends
+on how far you are from it. Nearest distance applied
+to data visibility — structure determines access,
+not bolted-on permissions.
 
 ## Bootstrap Sequence
 
