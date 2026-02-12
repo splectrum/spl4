@@ -81,3 +81,24 @@ invocation.
 Detection: presence of `/` or `./` in the first
 argument means fully qualified. Absence means named —
 resolve at current context.
+
+## Path Semantics Across Scope Boundaries
+
+At a protocol invocation boundary, paths shift frame:
+
+- **Caller side:** relative to caller's context.
+- **Protocol side:** absolute from protocol's root
+  (registration context).
+
+The invocation layer rebases paths bidirectionally.
+Every protocol reasons from a root node. See scope.md
+for the full scope isolation model.
+
+## Ancestor Chain Resolution (Designed)
+
+mc.proto.resolve walks the ancestor chain: current
+context → parent → root. First match wins (nearest
+distance). Protocols at root are naturally global.
+Override by registering closer — naturally local.
+Same addressing mechanism, no separate global/local
+concept. See protocols.md.

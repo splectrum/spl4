@@ -119,3 +119,47 @@ granularity: natural language (opaque) → structured file
 (partially explicit) → individual records in contexts
 (fully explicit). All the same primitive at different
 resolution.
+
+## Real vs Virtual Contexts
+
+A context is either real (physically present) or virtual
+(defined by type, not yet instantiated).
+
+- **Real** — exists physically. Has content, can be
+  operated on.
+- **Virtual** — defined in the parent's metadata as a
+  candidate for instantiation. A type with config that
+  isn't an instance yet.
+
+Creating = making a virtual context real. The virtual
+type in the parent determines what can be created. You
+cannot create a real context where no virtual of that
+kind exists.
+
+A parent context declares its virtual children in
+metadata. The `*` wildcard means any number of instances
+of this virtual type can become real.
+
+mc.xpath resolve returns real or error today. Virtual
+comes when type definitions are wired up.
+
+## Scripting Semantics (Direction)
+
+Seamless error handling at the logical scripting level.
+No try/catch, no if/else. Error handling as expression
+syntax:
+
+    dosomething(mc.xpath(...)) or dosomethingelse()
+
+The happy path and fallback are at the same syntactic
+level. Errors propagate naturally through pipelines.
+Fallbacks compose:
+
+    do(x) or do(y) or do(z)
+
+The "or" pattern is the fundamental error handling
+primitive at the scripting level. This shapes API
+design: operations that fail produce errors that flow
+to the next alternative.
+
+Designed, not yet built.

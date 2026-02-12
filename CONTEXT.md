@@ -1,30 +1,33 @@
 # Context
 
-## Current: Dogfood — Complete the protocol bundle and update context-view
+## Current: Documentation Consolidation
 
-spl4's integration mission is reaching its first real test. The Mycelium protocol stack is built (mc.core, mc.raw, mc.xpath, proper mc.proto). This project simplifies the APIs by moving session state (SPL_ROOT) to the environment, adds namespace filters (mc.data for user data, mc.meta for metadata), and updates context-view to consume the protocol stack instead of direct filesystem access. First practical validation of the three-layer architecture.
+Three new model documents (protocols, bootstrap, scope) organizing architecture decisions from the protocol bundle projects. Four existing documents updated with new terminology. Establishes Mycelium as the authoritative source for protocol stack architecture and realization logic.
 
-See projects/08-dogfood/
+See projects/09-documentation/
 
 ## Completed
 
-Protocol Bootstrap Chain — Stateless bootstrap with one direct-file-access seam, proper protocols via mc.raw, mc.xpath resolves locations.
-  See projects/06-mycelium-api/EVALUATION.md
+Project 08: Dogfood — Completed mc.data and mc.meta filters, environment-based session, context-view as first protocol consumer
+  See projects/08-dogfood/EVALUATION.md
 
-mc.core + mc.raw + Proper mc.proto — Five primitive operations, format interpretation layer, substrate-agnostic protocol resolution.
+Project 07: mc.raw + Proper mc.proto — Implemented mc.core primitives, mc.raw format layer, proper mc.proto with mc.raw, completed protocol bundle
   See projects/07-mc-raw/EVALUATION.md
 
-File-Level Metadata — Repo root and project instance metadata contexts, document specs, uniform schema across all context types.
+Project 06: Bootstrap Chain — Established stateless protocols, mc.proto boot implementation, mc.xpath resolver, spl runner
+  See projects/06-mycelium-api/EVALUATION.md
+
+Project 05: File-Level Metadata — Defined file metadata contexts, project instance type definition, prepared for Mycelium API work
   See projects/05-file-metadata/EVALUATION.md
 
-Context Metadata — `.spl` directory structure, protocol mounting, `spl` runner, XPath-style addressing model.
+Project 04: Context Metadata — Implemented .spl structure, protocol mounting, addressing model, spl runner script
   See projects/04-context-metadata/EVALUATION.md
 
-Context View Embedding — Three-step pipeline (scan, haiccer, persist), memory moved to .claude/rules/, tool reports structure without expecting it.
+Project 03: Context View Embedding — Developed context-view tool with scan/haiccer/persist pipeline, moved memory to .claude/rules/
   See projects/03-context-view/EVALUATION.md
 
-Pillar Structure — Three pillars made structurally distinguishable (mycelium/, splectrum/, haicc/, exploratory-repo/), vocabulary and principles organized by concern.
+Project 02: Pillar Structure — Created mycelium/, splectrum/, haicc/, exploratory-repo/ directories with vocabulary and definitions
   See projects/02-pillar-structure/EVALUATION.md
 
-Initialization — spl4 scaffolded from seed, CLAUDE.md and principles placed at root, reference code separated, memory installed.
+Project 01: Initialization — Extracted seed contents, created repository structure, installed working memory
   See projects/01-initialization/EVALUATION.md

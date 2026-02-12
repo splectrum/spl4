@@ -33,7 +33,8 @@ See `addressing.md` for the full invocation model.
 When a protocol is invoked, the context's layer stack
 is traversed to find the capability binding. Nearest
 distance wins — a local layer can override a binding
-from a layer below.
+from a layer below. See protocols.md for the mc protocol
+stack and bootstrap.md for how the system starts.
 
 ## Portability
 
