@@ -1,4 +1,4 @@
 {
-  "module": ".spl/proto/mc.proto/boot.js",
+  "module": ".spl/proto/mc.proto/resolve.js",
   "help": "Resolve protocol names to configurations"
 }

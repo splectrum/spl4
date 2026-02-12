@@ -1,0 +1,4 @@
+{
+  "module": ".spl/proto/mc.core/core.js",
+  "help": "Five primitive operations on repository structure"
+}
