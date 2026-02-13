@@ -2,38 +2,68 @@
 
 How the system starts.
 
+## spl/boot
+
+spl is a protocol with operations. spl/boot is the
+entry point — the one hardcoded operation (it can't
+resolve itself via a map that doesn't exist yet).
+
 ## The Sequence
 
-1. `spl` invoked at repo root (bash wrapper)
-2. spl sets SPL_ROOT from env, launches node with spl.mjs
-3. spl.mjs loads mc.proto/map.js — the proto map builder
-4. Map checks staleness, rebuilds if needed (scans
-   all .spl/proto/ directories)
-5. Protocol/operation resolved via map lookup
-6. Module imported, factory called with exec doc
-7. Bound operator invoked with arguments
+1. `spl` bash wrapper sets SPL_ROOT from git, launches
+   node with spl.mjs
+2. spl/boot reads SPL_ROOT from env — the one seam
+3. Imports mc.proto/map.js (module cache persists the
+   code for the process lifetime)
+4. Ensures the proto map (load from disk or build from
+   filesystem scan). Module-level variable persists
+   the data.
+5. Imports mc.exec
+6. Creates exec doc — root (enumerable, appears in faf),
+   map (non-enumerable, invisible to faf)
+7. faf start drop
+8. Resolves protocol/operation via map lookup
+9. Imports operation module, calls async factory with
+   exec doc, gets bound operator
+10. Invokes operator with remaining CLI args
+11. faf complete drop
+12. Formats output
 
-## The Bootstrap
+## Persistence Model
 
-The proto map builder (mc.proto/map.js) is the bootstrap.
-It reads the filesystem directly — scanning .spl/proto/
-directories and their config.json files. This is the
-one point where the system assumes a filesystem.
+Three layers of persistence, each serving a different
+concern:
 
-The map is cached at .spl/exec/state/mc/proto/map.json.
-Staleness detection via directory mtimes ensures the
-map stays current without scanning on every invocation.
+**Code persistence** — mc.proto/map.js in the Node
+module cache. The resolve function and map logic stay
+loaded for the process lifetime. Imported once at boot,
+available to all subsequent callers in the same process.
+
+**Data persistence** — proto map as non-enumerable
+property on the exec doc. Accessible to all operations
+via doc.map. Invisible to JSON.stringify, stays out of
+faf drops. Root as enumerable property (doc.root) —
+appears in faf for audit.
+
+**Cross-process persistence** — map.json on disk. Each
+new process loads it at boot. No staleness detection —
+the process that changes registrations calls rebuild().
+`spl spl init` is the explicit rebuild command.
 
 ## Design Properties
 
-**One seam.** The map builder is the single point where
-the system assumes a filesystem. All protocol operations
-are invoked through the map's resolved module paths.
+**One seam.** SPL_ROOT is read once by spl/boot from
+the environment. After that, doc.root carries it.
+Protocol operations never touch process.env.
 
-**Minimal.** The bootstrap is a scan + cache. No chain,
-no self-replacing protocol, no multi-step resolution.
+**Minimal.** Boot loads one module, ensures one cache,
+creates one doc. No chain, no multi-step resolution.
 
-**No boot leakage.** The map builder runs at startup
-if needed. Protocol operations never interact with
-it — they receive their exec doc from spl and work
-through the factory pattern.
+**No boot leakage.** Protocol operations receive their
+exec doc from spl/boot and work through the factory
+pattern. They don't know or care about the boot sequence.
+
+## Roadmap
+
+mc.boot protocol when boot complexity demands it.
+For now spl/boot is sufficient.

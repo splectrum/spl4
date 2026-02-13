@@ -144,6 +144,38 @@ of this virtual type can become real.
 mc.xpath resolve returns real or error today. Virtual
 comes when type definitions are wired up.
 
+## Schemas (Direction)
+
+Records are opaque bytes — schemas give those bytes a
+contract. A schema is metadata on a context that describes
+the shape of its records.
+
+Graduated path:
+1. Convention — implicit shapes (e.g. config.json fields)
+2. Avro schemas as context metadata — co-located with
+   the data they describe, stored as records
+3. Avro RPC for protocol contracts — operations declare
+   input/output schemas, wire protocol for client-server
+4. Schema evolution — Avro compatibility rules for
+   evolving structures without breaking consumers
+
+avsc (pure JS Avro implementation) — proven in spl2.
+
+## Physical Layer (Direction)
+
+Current substrate: Node.js filesystem. Future: Bare
+runtime for Pear P2P platform (Hypercore/Hyperbee as
+storage, Hyperswarm for connectivity).
+
+Transition from Node to Bare is mainly package.json
+import maps for library switching. Current code uses
+minimal Node built-ins (fs, path, url, crypto).
+
+The three-layer model already anticipates this —
+same logical model, different capability and physical
+layers. Avro schemas enforce contracts over P2P wire
+protocols (Bare + Hypercore + avsc).
+
 ## Scripting Semantics (Direction)
 
 Seamless error handling at the logical scripting level.

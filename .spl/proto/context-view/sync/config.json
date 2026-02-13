@@ -1,0 +1,5 @@
+{
+  "module": ".spl/proto/context-view/context-view.js",
+  "function": "sync",
+  "format": "formatSync"
+}

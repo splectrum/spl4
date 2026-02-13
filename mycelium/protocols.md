@@ -6,15 +6,22 @@ operations) to running code.
 
 ## Session
 
-The execution environment carries session state:
+The execution environment carries session state through
+the exec doc:
 
-- **SPL_ROOT** — git repository root, from environment.
-  Set once by the spl wrapper, read by every protocol.
+- **root** — git repository root. Read once from
+  SPL_ROOT env by spl/boot, then carried on the exec
+  doc. Protocol operations use doc.root, never the
+  env var directly.
+- **map** — the proto map. Non-enumerable property on
+  the exec doc. Invisible to faf serialization, fully
+  accessible in code.
 - **cwd** — current position relative to root. Tied to
   scope isolation (see scope.md). Not yet implemented.
 
-Protocols pick up session context from the environment.
-They don't create or own state.
+Protocol operations receive session context through the
+exec doc at factory time. They don't read env vars or
+create their own state.
 
 ## The Stack
 
@@ -73,38 +80,29 @@ will grow (move, copy); mc.core won't.
 
 ## Factory Pattern
 
-Protocol operations are factories. The exported function
-takes an execution document and returns a bound operator:
+Protocol operations are async factories. The exported
+function takes an execution document, imports its mc
+dependencies via doc.root, and returns a bound operator:
 
-    export function scan(execDoc) {
+    export async function scan(execDoc) {
+      const proto = p => pathToFileURL(join(execDoc.root, p)).href;
+      const data = await import(proto('.spl/proto/mc.data/data.js'));
+
       return async function (path) {
-        // execDoc is bound — context, config, logging
+        // execDoc + data in closure
         // do work, return result
       };
     }
 
-The exec doc is bound once at factory time. The returned
-operator works with just operational arguments. No ambient
-state, no globals — the execution context lives in the
-closure.
+The exec doc is bound once at factory time. mc modules
+are imported at factory time using doc.root — no env
+var dependency. The returned operator works with just
+operational arguments. No ambient state, no globals —
+everything lives in the closure.
 
-spl creates the exec doc, calls the factory, invokes the
-operator, completes the doc. The operation just does its
-work.
-
-## Module Imports
-
-All protocol modules use dynamic imports via SPL_ROOT:
-
-    const root = process.env.SPL_ROOT;
-    function proto(path) {
-      return pathToFileURL(join(root, path)).href;
-    }
-    const data = await import(proto('.spl/proto/mc.data/data.js'));
-
-One pattern everywhere — root protocols and sub-context
-protocols use the same mechanism. No relative imports
-to sibling protocols.
+spl/boot creates the exec doc, calls the factory (await),
+invokes the operator, completes the doc. The operation
+just does its work.
 
 ## Calling Convention
 
@@ -160,7 +158,9 @@ protocol can be registered at different contexts.
 **Proto map.** mc.proto scans all .spl/proto/ directories
 in the repo and builds a map: `protocol/operation` →
 context + config. Cached at .spl/exec/state/mc/proto/map.json.
-Rebuilt when registrations change (mtime detection).
+No staleness detection — the process that changes
+registrations calls rebuild. `spl spl init` is the
+explicit rebuild command.
 
 **Lookup.** Given `protocol/operation`, find registrations
 in the map. Single registration: return it. Multiple:

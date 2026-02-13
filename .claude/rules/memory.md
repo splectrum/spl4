@@ -14,7 +14,7 @@
 ## The Model (proven)
 - Record = key → content (opaque bytes)
 - Context = container of records (recursive)
-- Seven operations: list, read, flatten, create, write, delete, move
+- Eight operations: list, read, flatten, create, write, delete, append, move
 - Three layers: logical, capability, physical
 - Flat API, metadata-driven behavior, nearest distance
 - Changelog as sibling record, three modes
@@ -48,72 +48,61 @@
 - haicc/ — the creative world (build cycle, spawn, evaluator)
 - exploratory-repo/ — context type for this kind of repo
 
-## Protocol Architecture (established project 06)
+## Protocol Architecture (current as of project 12)
 
-### Stateless protocols
-- No factories, no instances, no closures hiding state
-- Protocols receive what they need as parameters
-- State is explicit and exposed — never hidden
+### spl as protocol
+- spl is a registered protocol with operations
+- spl/boot is hardcoded entry point (can't resolve itself)
+- spl/init rebuilds proto map (`spl spl init`)
 
-### Session
-- root: git repo root, from terminal environment
-- cwd: current position relative to root (Mycelium's cd)
-- Protocols pick up session context, don't create their own
+### Factory pattern (from spl2)
+- Async factories: exported function takes exec doc,
+  imports mc deps via doc.root, returns bound operator
+- No env var dependency in protocol operations
+- spl/boot creates exec doc, awaits factory, invokes operator
 
-### Protocol resolution — ancestor chain
-- mc.proto.resolve walks current → parent → ... → root
-- Nearest distance wins. No separate global/local concept.
-- Static = found at current context (code lives here)
-- Dynamic = found via ancestor walk (inherited)
-- Override by registering closer — shadows ancestor's version
-- Protocol executes at its registration context (static loc)
-- Forward scope: registration determines data boundary (subtree)
+### Session (exec doc)
+- doc.root — repo root (enumerable, appears in faf)
+- doc.map — proto map (non-enumerable, invisible to faf)
+- SPL_ROOT read once by spl/boot, never by operations
 
-### Scope isolation (critical)
-- Every protocol invocation is a scope boundary
-- Paths rebased automatically at boundary (both ways)
-- Scope switch fully internal, never leaks to caller
-- Caller's context unchanged after invocation returns
-- mc.xpath must support context-relative paths for rebasing
+### Persistence model
+- Code: module cache (mc.proto/map.js loaded once per process)
+- Data: proto map as module-level variable + non-enumerable on exec doc
+- Cross-process: map.json on disk, no staleness detection
+- Rebuild: explicit via spl/init or mapModule.rebuild()
 
-### Protocol stack (established project 07)
-- mc.xpath — resolve paths to Locations (stateless)
-- mc.core — five primitives: list, read, create, update, del
-  Buffer in/out. The stable contract that doesn't grow.
-- mc.raw — delegates to mc.core, adds format layer
-  (utf-8, JSON on read; type detection on write).
-  Future: compound ops (move, copy). Pre-semantic.
-- mc.proto — proper: uses mc.core.read for config resolution
-  boot: direct file access, used once at startup
+### Protocol stack
+- mc.xpath — resolve paths to Locations
+- mc.core — six primitives + append (stable contract)
+- mc.raw — format layer on mc.core (pre-semantic)
+- mc.data — user data view (.spl filtered)
+- mc.meta — metadata view (.spl/meta/ scoped)
+- mc.proto — protocol resolution (map-based)
 
-Three layers: primitives (mc.core) → richer structural
-(mc.raw) → semantic (mc.data/mc.meta/mc.proto)
-
-### Bootstrap
-- spl invoked at repo root, sets SPL_ROOT from git
-- Boot mc.proto: the ONE bootstrap protocol, direct file
-  access, assumes filesystem + root
-- Boot resolves proper mc.proto (one-time), then proper
-  mc.proto handles all subsequent resolution
-- Boot restrictions don't leak into running system
-
-### spl boundary
-- spl validates at boundary, protocols trust internally
-- Currently pass-through, validation when capability exists
-- Internal concern, no architectural change needed
+### Registration (operation-level)
+- .spl/proto/<protocol>/<operation>/config.json
+- Config: module, function, format
+- Proto map: protocol/operation → context + config
+- Longest prefix match for multiple registrations
 
 ### Dev vs deployed
 - Deployed code in .spl/proto/ (running)
 - Dev/reference copies in project src/
-- Proper dev envs wait for cascading references + layering
 
 ## Deployed Code
-- `.spl/proto/mc.proto/boot.js` — boot protocol resolve
-- `.spl/proto/mc.proto/resolve.js` — proper resolve (via mc.core)
+- `.spl/spl.mjs` — spl/boot entry point
+- `.spl/proto/mc.proto/map.js` — proto map builder/resolver
+- `.spl/proto/mc.exec/exec.js` — faf execution store
 - `.spl/proto/mc.xpath/resolve.js` — location resolver
-- `.spl/proto/mc.core/core.js` — five primitives
+- `.spl/proto/mc.core/core.js` — six primitives
 - `.spl/proto/mc.raw/raw.js` — format layer on mc.core
-- `.spl/spl.mjs` — bootstrap chain logic
+- `.spl/proto/mc.data/data.js` — user data view
+- `.spl/proto/mc.meta/meta.js` — metadata view
+- `.spl/proto/spl/init.js` — proto map rebuild
+- `.spl/proto/stats/stats.js` — context statistics
+- `.spl/proto/context-view/context-view.js` — CONTEXT.md generator
+- `projects/.spl/proto/tidy/tidy.js` — transient cleanup
 - `spl` — bash wrapper (sets SPL_ROOT, exec node)
 
 ## Reference Code
@@ -121,11 +110,10 @@ Three layers: primitives (mc.core) → richer structural
 - `reference/context-layer/` — flat API, traversal, storage capabilities (from spl3/08)
 - `reference/evaluator/` — requirements evaluation pipeline (from spl3/09)
 
-## Carry Forward (from project 07)
-- mc.raw compound operations (move, copy)
-- Namespace filters (mc.data, mc.meta) on mc.core
-- Ancestor chain resolution in mc.proto
+## Carry Forward
 - Scope isolation / path rebasing
-- Session formalisation (root + cwd as object)
-- Protocol config schema
-- Documentation consolidation pass (after core bundle complete)
+- Schemas: Avro (avsc) — convention → metadata → RPC
+- Bare runtime for Pear P2P platform
+- mc.boot protocol when boot complexity demands it
+- mc.raw compound operations (move, copy)
+- Stream consumers for exec data

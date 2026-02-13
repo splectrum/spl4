@@ -1,4 +1,0 @@
-{
-  "run": "node .spl/proto/context-view/cli.js sync",
-  "help": "Generate context description from repo structure"
-}

@@ -30,12 +30,17 @@ is behavior.
 
 ### What exists as proven code
 
-- Record/context primitive with seven operations
+- Record/context primitive with eight operations
+  (list, read, flatten, create, write, delete, append, move)
 - Three-layer architecture: logical, capability, physical
 - Two interchangeable storage capabilities (folder, file)
 - Flat API with metadata-driven enforcement
 - Context traversal with nearest-distance accumulation
 - Changelog as sibling records with three causality modes
+- Protocol system: operation-level registration, map-based
+  resolution, async factory pattern, spl as protocol
+- Execution store: fire-and-forget streaming, data/state
+  split, boundary trust model
 - Data-triggered evaluation pipeline (natural language
   requirements → quality gate results)
 - Context-view generator (cold-start orientation)
