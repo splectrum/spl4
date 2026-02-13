@@ -99,11 +99,19 @@ handles the physical difference.
 
 ## Protocol
 
-A named capability interface bound to a context.
-Protocol name is the key, capability binding is the
-value. Lives in `.spl/proto/`. Invoked via the `spl`
-runner — named mode resolves at a target context,
-fully qualified mode carries the context in the path.
+A namespace for operations bound to a context. Lives
+in `.spl/proto/<protocol>/<operation>/`. Each operation
+has its own config.json (module, function, format).
+Invoked via spl: `spl <protocol> <operation> [path]`.
+Resolved via the proto map — cached scan of all
+.spl/proto/ directories. See protocols.md.
+
+## Factory (Protocol Pattern)
+
+Protocol operations are factories. The exported function
+takes an execution document and returns a bound operator.
+The exec doc is bound once; the operator works with
+just operational arguments. See protocols.md.
 
 ## Data View
 
@@ -121,15 +129,14 @@ read session state — they don't create or own it.
 ## Protocol Stack
 
 The layered realization of the model. mc.xpath resolves
-locations. mc.core provides five primitives. mc.raw adds
+locations. mc.core provides six primitives. mc.raw adds
 format interpretation. mc.data, mc.meta, mc.proto are
 semantic views on mc.core. See protocols.md.
 
 ## mc.core
 
 Six primitive operations (list, read, create, update,
-del, append). Buffer in, Buffer out. The stable
-contract.
+del, append). Buffer in, Buffer out. The stable contract.
 
 ## mc.raw
 

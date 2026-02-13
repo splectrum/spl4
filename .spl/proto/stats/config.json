@@ -1,4 +1,0 @@
-{
-  "run": "node .spl/proto/stats/cli.js",
-  "help": "Context statistics — files, lines, bytes"
-}

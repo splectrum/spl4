@@ -1,4 +1,0 @@
-{
-  "run": "node projects/.spl/proto/tidy/cli.js",
-  "help": "Transient artifact cleanup for project instances"
-}

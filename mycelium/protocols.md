@@ -2,8 +2,7 @@
 
 The protocol stack is the realization of the Mycelium
 model. It bridges abstract concepts (record, context,
-operations) to running code. All protocols are stateless
-— no factories, no instances, no closures hiding state.
+operations) to running code.
 
 ## Session
 
@@ -54,40 +53,73 @@ addresses relative to context (e.g. 'context.json'),
 mc.meta adds the .spl/meta/ prefix. The caller doesn't
 hardcode .spl paths.
 
-**mc.proto** resolves protocol names to configurations.
-Reads .spl/proto/<name>/config.json. Has a boot
-implementation (direct file access) and a proper
-implementation (via mc.core). See bootstrap.md.
+**mc.proto** resolves protocol operations to configurations.
+Builds a proto map by scanning .spl/proto/ directories
+across the repo. The map is cached at
+.spl/exec/state/mc/proto/map.json and rebuilt when
+registrations change.
 
 ## mc.core vs mc.raw
 
 Two distinct protocols, not versions of each other.
 
-mc.core is the primitives — the stable contract that
-doesn't change. Five operations, opaque bytes, minimal.
+mc.core is the primitives — the stable contract.
+Six operations, opaque bytes, minimal.
 
 mc.raw is richer structural access built on mc.core.
 Format interpretation, compound operations. Pre-semantic
 — raw filesystem structures, no meaning yet. mc.raw
 will grow (move, copy); mc.core won't.
 
-## Stateless Design
+## Factory Pattern
 
-No protocol maintains state between calls. Every
-invocation is independent. The session (environment
-variables) is the only shared state, and it's explicit
-and external.
+Protocol operations are factories. The exported function
+takes an execution document and returns a bound operator:
 
-This means:
-- No initialization required
-- No coupling between calls
-- Any protocol can be replaced without teardown
-- Testing is straightforward — set env, call function
+    export function scan(execDoc) {
+      return async function (path) {
+        // execDoc is bound — context, config, logging
+        // do work, return result
+      };
+    }
+
+The exec doc is bound once at factory time. The returned
+operator works with just operational arguments. No ambient
+state, no globals — the execution context lives in the
+closure.
+
+spl creates the exec doc, calls the factory, invokes the
+operator, completes the doc. The operation just does its
+work.
+
+## Module Imports
+
+All protocol modules use dynamic imports via SPL_ROOT:
+
+    const root = process.env.SPL_ROOT;
+    function proto(path) {
+      return pathToFileURL(join(root, path)).href;
+    }
+    const data = await import(proto('.spl/proto/mc.data/data.js'));
+
+One pattern everywhere — root protocols and sub-context
+protocols use the same mechanism. No relative imports
+to sibling protocols.
 
 ## Calling Convention
 
-Every protocol operation takes a path as its first
-argument. The path determines what the operation acts on.
+CLI: `spl <protocol> <operation> [path] [args...]`
+
+Operation is mandatory. Each operation is registered
+independently — the protocol is a namespace, the
+operation is the unit of registration and invocation.
+
+    spl stats collect /projects/08-dogfood
+    spl tidy scan
+    spl tidy clean 08-dogfood
+
+The operation's first argument is a path — determines
+what the operation acts on.
 
 - **Upward (own context):** path is `.` — operate at
   the protocol's own root. Default when omitted.
@@ -95,50 +127,52 @@ argument. The path determines what the operation acts on.
   — at minimum the descendant's context root,
   optionally deeper.
 
-    stats(path)             — stats on target
-    tidy.scan(path)         — scan from target down
-    tidy.clean(path)        — clean at target
-    evaluate(path)          — evaluate project at target
-
-mc protocols already follow this convention:
-`mc.data.list(path)`, `mc.core.read(path)`. Extending
-it to all protocol operations makes it universal.
-
 The path is compact. A single path can address a
 location multiple protocol scopes deep without the
 caller needing to know where the boundaries are.
 
+## Registration
+
+Operations are registered in .spl/proto/ directories
+at the operation level:
+
+    .spl/proto/
+      stats/
+        collect/config.json
+      tidy/
+        scan/config.json
+        clean/config.json
+
+Each config.json specifies module, function, and
+optional format function:
+
+    {
+      "module": ".spl/proto/stats/stats.js",
+      "function": "collect",
+      "format": "format"
+    }
+
+Partial API registration: individual operations of a
+protocol can be registered at different contexts.
+
 ## Resolution
 
-Protocols are registered in .spl/proto/ directories.
-Resolution: walk the path, check for .spl/proto/ at
-each context boundary. Nearest to the target wins.
+**Proto map.** mc.proto scans all .spl/proto/ directories
+in the repo and builds a map: `protocol/operation` →
+context + config. Cached at .spl/exec/state/mc/proto/map.json.
+Rebuilt when registrations change (mtime detection).
 
-    spl tidy 08-dogfood/src
-    Walk: /projects/08-dogfood/src
-      → src (no .spl) → 08-dogfood (no .spl)
-      → projects (has .spl/proto/tidy) → found
-    Context root: /projects
-    Forward path: 08-dogfood/src
+**Lookup.** Given `protocol/operation`, find registrations
+in the map. Single registration: return it. Multiple:
+longest prefix match of target path — nearest to the
+target wins.
 
-The path determines both which protocol resolves and
-where it operates. One mechanism.
-
-- **Static** — found at current context. Code lives here.
-- **Dynamic** — found via ancestor walk. Inherited.
+    spl tidy scan 08-dogfood
+    → lookup "tidy/scan" → found at /projects → invoke
 
 No separate global/local concept. mc bundles at root
 are naturally global (found from anywhere). Override
 by registering closer — naturally local. Same mechanism.
-
-**Calling upward:** all protocols in ancestor contexts
-are reachable, not just root. The path `.` resolves
-up the chain from the current context.
-
-**Calling downward:** the path naturally includes or
-exceeds the descendant's context root. The segment up
-to the context boundary is the descendant's execution
-root. The remainder is within that scope.
 
 See scope.md for execution context and path rebasing.
 
@@ -167,22 +201,23 @@ Consumers process the stream: lifecycle indexes,
 protocol resolution maps, audit views, compacted
 summaries. All sit in state/.
 
-**State change attribution:** mc protocols don't own
-executions — they attribute state changes to the calling
-protocol. The execution doc is passed explicitly as an
-optional parameter to mc operations. When present, mc
-records the state change in the doc. When absent (direct
-mc call with no protocol context), the change is logged
-at repo root.
+**Top-level logging:** spl creates an exec doc for every
+invocation (start/finish). All operations produce at
+least two faf drops — boundary entry and boundary exit.
+This is the audit baseline.
 
-Protocols that only read never create exec instances.
-State changes are captured where they happen (in mc)
-and attributed to who caused them (the calling protocol).
+**Data state change logging:** additional logging within
+the operation, only when the operation changes data state.
+mc protocols attribute state changes to the calling
+protocol via the exec doc passed as optional parameter.
+When absent, the change is logged at repo root.
+
+If there is additional logging demand (beyond start/finish),
+that means there is demand for data within — the logging
+is earned, not speculative.
 
 See execution.md for the streaming model, trust zones,
 and the execution document lifecycle.
-
-Designed, not yet built.
 
 ## Single-Path Addressing (Direction)
 

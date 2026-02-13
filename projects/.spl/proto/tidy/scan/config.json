@@ -1,0 +1,5 @@
+{
+  "module": "projects/.spl/proto/tidy/tidy.js",
+  "function": "scan",
+  "format": "formatResult"
+}

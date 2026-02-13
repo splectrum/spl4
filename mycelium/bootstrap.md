@@ -1,49 +1,39 @@
 # Bootstrap
 
-How the system starts. One protocol has a boot
-implementation. Everything else follows from that.
+How the system starts.
 
 ## The Sequence
 
 1. `spl` invoked at repo root (bash wrapper)
-2. spl sets SPL_ROOT from git, launches node
-3. Boot mc.proto loaded — direct file access, one
-   known location (.spl/proto/mc.proto/)
-4. Boot mc.proto resolves proper mc.proto config
-5. Proper mc.proto loaded — uses mc.core.read,
-   substrate-agnostic
-6. mc.xpath resolved and loaded — verify root is
-   a mycelium context
-7. Requested protocol resolved and invoked
+2. spl sets SPL_ROOT from env, launches node with spl.mjs
+3. spl.mjs loads mc.proto/map.js — the proto map builder
+4. Map checks staleness, rebuilds if needed (scans
+   all .spl/proto/ directories)
+5. Protocol/operation resolved via map lookup
+6. Module imported, factory called with exec doc
+7. Bound operator invoked with arguments
 
-## Boot mc.proto
+## The Bootstrap
 
-The only protocol with a boot implementation. Direct
-file access, assumes filesystem substrate, reads
-SPL_ROOT from environment.
+The proto map builder (mc.proto/map.js) is the bootstrap.
+It reads the filesystem directly — scanning .spl/proto/
+directories and their config.json files. This is the
+one point where the system assumes a filesystem.
 
-Minimal: read one config.json from a known path.
-Just enough to resolve the real mc bundles. Boot
-restrictions (filesystem assumption, known path)
-don't leak into the running system.
-
-## Proper mc.proto
-
-Uses mc.core.read instead of direct file access.
-Substrate-agnostic — works with any mc.core
-implementation, not just filesystem. Replaces boot
-after the bootstrap chain completes.
+The map is cached at .spl/exec/state/mc/proto/map.json.
+Staleness detection via directory mtimes ensures the
+map stays current without scanning on every invocation.
 
 ## Design Properties
 
-**One seam.** Boot mc.proto is the single point where
-the system assumes a filesystem. Everything after
-bootstrap goes through the protocol stack.
+**One seam.** The map builder is the single point where
+the system assumes a filesystem. All protocol operations
+are invoked through the map's resolved module paths.
 
-**Self-replacing.** The boot protocol resolves its own
-replacement. The proper mc.proto handles all subsequent
-resolution.
+**Minimal.** The bootstrap is a scan + cache. No chain,
+no self-replacing protocol, no multi-step resolution.
 
-**No boot leakage.** Once the bootstrap chain completes,
-no protocol depends on filesystem assumptions. The boot
-code path is not reachable from the running system.
+**No boot leakage.** The map builder runs at startup
+if needed. Protocol operations never interact with
+it — they receive their exec doc from spl and work
+through the factory pattern.

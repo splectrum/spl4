@@ -1,0 +1,5 @@
+{
+  "module": ".spl/proto/stats/stats.js",
+  "function": "collect",
+  "format": "format"
+}
