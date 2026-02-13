@@ -166,12 +166,20 @@ See execution.md.
 
 ## Execution Store (.spl/exec/)
 
-Persisted execution state. Global log at /.spl/exec/log
-(lean JSONL index, source of truth). Local snapshots at
-<context>/.spl/exec/<proto>/<uid>/ (full doc state).
+Two concerns: data/ (raw faf stream, source of truth)
+and state/ (derived consumer outputs, rebuildable).
+Faf drops are immutable files named <ms-since-epoch>-<seq>.json.
 mc protocols attribute state changes to the first non-mc
 caller via the execution doc passed as optional parameter.
 See protocols.md, execution.md.
+
+## Fire and Forget (faf)
+
+Non-blocking persistence of the execution doc. Drop the
+data, move on. Each drop is immutable once written. The
+drops form a temporal stream — consumers process it
+independently. The execution is never burdened by what
+happens to its drops after they land.
 
 ## Real / Virtual (Context)
 

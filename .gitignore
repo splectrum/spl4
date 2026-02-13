@@ -4,6 +4,6 @@ dist/
 .DS_Store
 Thumbs.db
 .context-view/
-.spl/exec/log
-**/.spl/exec/*/
+**/.spl/exec/data/
+**/.spl/exec/state/
 package-lock.json

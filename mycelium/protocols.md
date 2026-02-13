@@ -145,18 +145,27 @@ See scope.md for execution context and path rebasing.
 ## Execution Store
 
 `.spl/exec/` — third namespace alongside meta/ and
-proto/. Holds transient execution state for protocol
-operations.
+proto/. Two concerns:
 
     .spl/exec/
-      <protocol-name>/
-        <uid>/              — one execution instance
-          start.json        — doc snapshot at creation
-          end.json          — doc snapshot at completion
-          ...               — additional snapshots
+      data/                 — raw faf stream
+        <protocol>/
+          <uid>/
+            <timestamp-seq>.json
+      state/                — derived consumer outputs
+        <consumer>/
+          <artifacts>
 
-See execution.md for the execution document model,
-outer/inner context separation, and snapshotting.
+**Data** is the source of truth. Fire-and-forget drops
+of the execution doc at boundary entry, boundary exit,
+and internal steps. Each drop is immutable, named by
+`<ms-since-epoch>-<seq>`. The stream is temporal and
+sortable.
+
+**State** is derived from data and rebuildable.
+Consumers process the stream: lifecycle indexes,
+protocol resolution maps, audit views, compacted
+summaries. All sit in state/.
 
 **State change attribution:** mc protocols don't own
 executions — they attribute state changes to the calling
@@ -166,18 +175,12 @@ records the state change in the doc. When absent (direct
 mc call with no protocol context), the change is logged
 at repo root.
 
-This means protocols that only read (stats, tidy scan)
-never create exec instances. State changes are captured
-precisely where they happen (in mc) and attributed to
-who caused them (the calling protocol). No registration
-decision needed at the protocol level.
+Protocols that only read never create exec instances.
+State changes are captured where they happen (in mc)
+and attributed to who caused them (the calling protocol).
 
-**UIDs** identify execution instances. Even single-threaded,
-UIDs give historical preservation, audit trail, and clean
-lifecycle (create → run → complete/fail → archive/discard).
-
-See execution.md for the full attribution model, trust
-zones, and the execution document lifecycle.
+See execution.md for the streaming model, trust zones,
+and the execution document lifecycle.
 
 Designed, not yet built.
 

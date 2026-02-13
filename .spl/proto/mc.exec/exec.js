@@ -1,29 +1,25 @@
 /**
  * mc.exec — execution store protocol.
  *
- * Manages the execution document lifecycle:
- * create → enrich → snapshot → complete/fail.
+ * Fire-and-forget (faf) persistence of execution docs.
+ * Drop the data, move on. Each drop is immutable.
  *
  * The doc is a plain object the protocol enriches
  * with inputs, config, and results. mc.exec manages
  * identity and persistence, not doc structure.
  *
- * Global log (/.spl/exec/log): lean JSONL entries.
- * Identity, status, timestamps. Source of truth for
- * lifecycle. Small, fast, suitable for locking.
+ * Drops are named <ms-since-epoch>-<seq>.json.
+ * Temporal, sortable, no collisions.
  *
- * Local store (<context>/.spl/exec/<proto>/<uid>/):
- * full doc snapshots. start.json, end.json, plus
- * any additional snapshots the protocol requests.
+ * Store structure:
+ *   .spl/exec/data/<proto>/<uid>/<timestamp-seq>.json
  *
- * Direct fs — mc.core lacks append. Documented seam.
+ * Direct fs — mc.core append not yet implemented.
+ * Documented seam, resolved when mc.core gains append.
  */
 
 import { randomUUID } from 'node:crypto';
-import {
-  appendFileSync, writeFileSync,
-  mkdirSync, existsSync
-} from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 function root() {
@@ -32,15 +28,26 @@ function root() {
   return r;
 }
 
-function logFile() {
-  return join(root(), '.spl', 'exec', 'log');
+/** Sequence counter for same-ms deduplication */
+let lastMs = 0;
+let seq = 0;
+
+function timestampName() {
+  const ms = Date.now();
+  if (ms === lastMs) {
+    seq++;
+  } else {
+    lastMs = ms;
+    seq = 0;
+  }
+  return `${ms}-${seq}`;
 }
 
-function localDir(context, protocol, uid) {
+function dataDir(context, protocol, uid) {
   const contextDir = context === '/'
     ? root()
     : join(root(), context.slice(1));
-  return join(contextDir, '.spl', 'exec', protocol, uid);
+  return join(contextDir, '.spl', 'exec', 'data', protocol, uid);
 }
 
 function ensureDir(dir) {
@@ -48,18 +55,13 @@ function ensureDir(dir) {
     mkdirSync(dir, { recursive: true });
 }
 
-/** Append lean entry to global log (atomic for small writes) */
-function appendLog(entry) {
-  ensureDir(join(root(), '.spl', 'exec'));
-  appendFileSync(logFile(), JSON.stringify(entry) + '\n');
-}
-
-/** Persist full doc snapshot to local store */
-function persistSnapshot(doc, label) {
-  const dir = localDir(doc.context, doc.protocol, doc.uid);
+/** Fire-and-forget drop — write and move on */
+function faf(doc) {
+  const dir = dataDir(doc.context, doc.protocol, doc.uid);
   ensureDir(dir);
+  const name = timestampName();
   writeFileSync(
-    join(dir, `${label}.json`),
+    join(dir, `${name}.json`),
     JSON.stringify(doc, null, 2)
   );
 }
@@ -71,8 +73,7 @@ function persistSnapshot(doc, label) {
  * The protocol enriches it with inputs and config
  * before processing.
  *
- * Writes lean entry to global log (source of truth).
- * Snapshots the doc as start.json.
+ * Faf drop: boundary entry.
  */
 export function create(protocol, context, parentUid = null) {
   const uid = randomUUID();
@@ -83,58 +84,40 @@ export function create(protocol, context, parentUid = null) {
     timestamp, status: 'running'
   };
 
-  // Global log first (source of truth)
-  appendLog({
-    uid, protocol, context, parentUid,
-    timestamp, status: 'running'
-  });
-
-  // Local snapshot
-  persistSnapshot(doc, 'start');
-
+  faf(doc);
   return doc;
 }
 
 /**
- * snapshot — persist the doc at this moment.
+ * drop — persist the doc at this moment.
  *
- * Label identifies the snapshot (e.g. step name,
- * sequence number). The full doc is written — not
- * a delta, not an event. Complete state at this point.
+ * Internal step capture. The full doc is written —
+ * not a delta, not an event. Complete state at this
+ * point. Fire and forget.
  */
-export function snapshot(doc, label = 'snapshot') {
-  persistSnapshot(doc, label);
+export function drop(doc) {
+  faf(doc);
 }
 
 /**
  * complete — mark execution as completed.
  *
- * Snapshots the final doc as end.json.
- * Appends completion to global log.
+ * Faf drop: boundary exit.
  */
 export function complete(doc) {
-  const timestamp = new Date().toISOString();
   doc.status = 'completed';
-  doc.completedAt = timestamp;
-
-  persistSnapshot(doc, 'end');
-  appendLog({ uid: doc.uid, status: 'completed', timestamp });
+  doc.completedAt = new Date().toISOString();
+  faf(doc);
 }
 
 /**
  * fail — mark execution as failed.
  *
- * Snapshots the final doc as end.json.
- * Appends failure to global log.
+ * Faf drop: boundary exit.
  */
 export function fail(doc, error = null) {
-  const timestamp = new Date().toISOString();
   doc.status = 'failed';
-  doc.failedAt = timestamp;
+  doc.failedAt = new Date().toISOString();
   if (error) doc.error = error;
-
-  persistSnapshot(doc, 'end');
-  appendLog({
-    uid: doc.uid, status: 'failed', timestamp, error
-  });
+  faf(doc);
 }
