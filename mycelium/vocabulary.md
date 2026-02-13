@@ -127,9 +127,9 @@ semantic views on mc.core. See protocols.md.
 
 ## mc.core
 
-Five primitive operations (list, read, create, update,
-del). Buffer in, Buffer out. The stable contract. Does
-not grow.
+Six primitive operations (list, read, create, update,
+del, append). Buffer in, Buffer out. The stable
+contract.
 
 ## mc.raw
 
@@ -169,9 +169,9 @@ See execution.md.
 Persisted execution state. Global log at /.spl/exec/log
 (lean JSONL index, source of truth). Local snapshots at
 <context>/.spl/exec/<proto>/<uid>/ (full doc state).
-mc protocols don't register — they're infrastructure.
-Registration is a compile-time property of the operation
-definition. See protocols.md, execution.md.
+mc protocols attribute state changes to the first non-mc
+caller via the execution doc passed as optional parameter.
+See protocols.md, execution.md.
 
 ## Real / Virtual (Context)
 

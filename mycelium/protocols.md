@@ -32,10 +32,11 @@ Not an operation executor — only resolves. Filesystem
 substrate today. Later: cascading references, layering,
 wider syntax.
 
-**mc.core** is the stable foundation. Five primitive
-operations (list, read, create, update, del). Buffer
-in, Buffer out. No format interpretation, no compound
-operations. The contract other protocols build on.
+**mc.core** is the stable foundation. Six primitive
+operations (list, read, create, update, del, append).
+Buffer in, Buffer out. No format interpretation, no
+compound operations. The contract other protocols
+build on.
 
 **mc.raw** delegates to mc.core and adds richer
 structural access. Format interpretation on read
@@ -157,23 +158,26 @@ operations.
 See execution.md for the execution document model,
 outer/inner context separation, and snapshotting.
 
-**Registration rule (compile-time):** mc protocols never
-register. All other protocol operations that may change
-data state always register — determined at design time
-by the operation definition, not at runtime. A
-state-changing operation always creates an exec instance,
-even if a particular invocation happens not to change
-anything. A read-only operation never registers.
+**State change attribution:** mc protocols don't own
+executions — they attribute state changes to the calling
+protocol. The execution doc is passed explicitly as an
+optional parameter to mc operations. When present, mc
+records the state change in the doc. When absent (direct
+mc call with no protocol context), the change is logged
+at repo root.
+
+This means protocols that only read (stats, tidy scan)
+never create exec instances. State changes are captured
+precisely where they happen (in mc) and attributed to
+who caused them (the calling protocol). No registration
+decision needed at the protocol level.
 
 **UIDs** identify execution instances. Even single-threaded,
 UIDs give historical preservation, audit trail, and clean
 lifecycle (create → run → complete/fail → archive/discard).
 
-**Why mc protocols don't register:** mc is infrastructure
-— the substrate through which other protocols work.
-The meaningful audit is at the protocol level: what
-operation changed what data and when. mc operations are
-invisible plumbing underneath.
+See execution.md for the full attribution model, trust
+zones, and the execution document lifecycle.
 
 Designed, not yet built.
 

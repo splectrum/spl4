@@ -30,6 +30,7 @@ No extensions were required.
 | create | write | New record |
 | write | write | Overwrite existing record |
 | delete | write | Remove a record |
+| append | write | Add to existing record |
 | move | compound | Read + create + delete across contexts |
 
 Compound operations (move, update) compose from

@@ -25,6 +25,28 @@ The doc is extensible by convention, not by schema.
 Protocols add whatever keys they need. mc.exec manages
 identity and persistence but doesn't dictate structure.
 
+## Trust Model
+
+Three zones govern execution integrity:
+
+**Boundary** — validation happens here. Inputs,
+permissions, shape. The outer context validates
+before handing off to processing.
+
+**Inside** — trusted execution. No internal policing,
+no self-verification overhead. The execution is fast
+and trusted.
+
+**External** — assurance through observation. Log stream
+analysis operates across/outside the boundary, not
+within the execution. If proper operation needs to be
+verified, the logging stream is the input. Enforcement
+is independent from execution.
+
+This separation means execution is never burdened with
+proving its own correctness. Correctness is observed
+externally from the facts the execution produces.
+
 ## Outer and Inner Context
 
 Every protocol execution has an outer context. Complex
@@ -164,6 +186,37 @@ Produces new doc (or delta). Enforced purity.
 
 Each phase is a natural evolution. No phase requires
 reworking the previous one.
+
+## State Change Attribution
+
+mc protocols are infrastructure — they don't own
+executions. State changes (create, update, delete,
+append) pass through mc but are caused by the calling
+protocol.
+
+Attribution follows the call stack: the first non-mc
+protocol is the owner. The execution doc flows
+explicitly through mc calls as an optional parameter:
+
+    mc.core.del(path)              → no attribution
+    mc.core.del(path, { exec })    → attributed to exec owner
+
+When an exec doc is present, mc.core records the state
+change in the doc. When absent (direct mc call with no
+protocol context), the change is logged at repo root.
+
+This means:
+- The exec doc is visible at every call site
+- Attribution is immediate and precise, not derived
+- Read-only mc calls carry no overhead (no doc passed)
+- No ambient state, no hidden "current execution"
+- mc protocols don't register themselves — they
+  attribute to their caller
+
+The protocol creates the doc, passes it through mc
+calls that may change state, and completes it. mc
+protocols are transparent conduits that record facts
+in the doc they receive.
 
 ## mc.exec API (Minimal)
 
