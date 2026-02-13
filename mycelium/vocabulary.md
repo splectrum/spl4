@@ -156,6 +156,23 @@ access. Single seam where the system assumes filesystem.
 Replaced by proper mc.proto after bootstrap. See
 bootstrap.md.
 
+## Execution Document
+
+Plain data object carrying all runtime state for a
+protocol execution. Passed explicitly, enriched by
+the protocol with inputs, config, and results.
+Logging = snapshotting the doc at desired frequency.
+See execution.md.
+
+## Execution Store (.spl/exec/)
+
+Persisted execution state. Global log at /.spl/exec/log
+(lean JSONL index, source of truth). Local snapshots at
+<context>/.spl/exec/<proto>/<uid>/ (full doc state).
+mc protocols don't register — they're infrastructure.
+Registration is a compile-time property of the operation
+definition. See protocols.md, execution.md.
+
 ## Real / Virtual (Context)
 
 A real context exists physically — has content, can be

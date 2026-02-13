@@ -123,6 +123,7 @@ graph TD
   spl[".spl/"]
   meta[".spl/meta/"]
   proto[".spl/proto/"]
+  exec[".spl/exec/"]
   cv["context-view/"]
   mccore["mc.core/"]
   mcraw["mc.raw/"]
@@ -145,6 +146,7 @@ graph TD
 
   spl --> meta
   spl --> proto
+  spl --> exec
 
   proto --> cv
   proto --> mccore
@@ -157,6 +159,7 @@ graph TD
   style root fill:#d4e6f1,stroke:#2980b9
   style spl fill:#fadbd8,stroke:#e74c3c
   style proto fill:#fadbd8,stroke:#e74c3c
+  style exec fill:#fadbd8,stroke:#e74c3c
   style meta fill:#fadbd8,stroke:#e74c3c
 ```
 

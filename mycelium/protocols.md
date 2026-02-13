@@ -83,15 +83,45 @@ This means:
 - Any protocol can be replaced without teardown
 - Testing is straightforward — set env, call function
 
+## Calling Convention
+
+Every protocol operation takes a path as its first
+argument. The path determines what the operation acts on.
+
+- **Upward (own context):** path is `.` — operate at
+  the protocol's own root. Default when omitted.
+- **Downward (descendant):** path is a forward pointer
+  — at minimum the descendant's context root,
+  optionally deeper.
+
+    stats(path)             — stats on target
+    tidy.scan(path)         — scan from target down
+    tidy.clean(path)        — clean at target
+    evaluate(path)          — evaluate project at target
+
+mc protocols already follow this convention:
+`mc.data.list(path)`, `mc.core.read(path)`. Extending
+it to all protocol operations makes it universal.
+
+The path is compact. A single path can address a
+location multiple protocol scopes deep without the
+caller needing to know where the boundaries are.
+
 ## Resolution
 
 Protocols are registered in .spl/proto/ directories.
-mc.proto resolves a protocol name by reading its
-config.json. Today: single-level resolution at root.
+Resolution: walk the path, check for .spl/proto/ at
+each context boundary. Nearest to the target wins.
 
-**Designed (not yet built):** ancestor chain resolution.
-mc.proto.resolve walks current context → parent →
-grandparent → root. First match wins (nearest distance).
+    spl tidy 08-dogfood/src
+    Walk: /projects/08-dogfood/src
+      → src (no .spl) → 08-dogfood (no .spl)
+      → projects (has .spl/proto/tidy) → found
+    Context root: /projects
+    Forward path: 08-dogfood/src
+
+The path determines both which protocol resolves and
+where it operates. One mechanism.
 
 - **Static** — found at current context. Code lives here.
 - **Dynamic** — found via ancestor walk. Inherited.
@@ -100,7 +130,52 @@ No separate global/local concept. mc bundles at root
 are naturally global (found from anywhere). Override
 by registering closer — naturally local. Same mechanism.
 
+**Calling upward:** all protocols in ancestor contexts
+are reachable, not just root. The path `.` resolves
+up the chain from the current context.
+
+**Calling downward:** the path naturally includes or
+exceeds the descendant's context root. The segment up
+to the context boundary is the descendant's execution
+root. The remainder is within that scope.
+
 See scope.md for execution context and path rebasing.
+
+## Execution Store
+
+`.spl/exec/` — third namespace alongside meta/ and
+proto/. Holds transient execution state for protocol
+operations.
+
+    .spl/exec/
+      <protocol-name>/
+        <uid>/              — one execution instance
+          start.json        — doc snapshot at creation
+          end.json          — doc snapshot at completion
+          ...               — additional snapshots
+
+See execution.md for the execution document model,
+outer/inner context separation, and snapshotting.
+
+**Registration rule (compile-time):** mc protocols never
+register. All other protocol operations that may change
+data state always register — determined at design time
+by the operation definition, not at runtime. A
+state-changing operation always creates an exec instance,
+even if a particular invocation happens not to change
+anything. A read-only operation never registers.
+
+**UIDs** identify execution instances. Even single-threaded,
+UIDs give historical preservation, audit trail, and clean
+lifecycle (create → run → complete/fail → archive/discard).
+
+**Why mc protocols don't register:** mc is infrastructure
+— the substrate through which other protocols work.
+The meaningful audit is at the protocol level: what
+operation changed what data and when. mc operations are
+invisible plumbing underneath.
+
+Designed, not yet built.
 
 ## Single-Path Addressing (Direction)
 
