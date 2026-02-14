@@ -102,6 +102,8 @@
 - `.spl/proto/spl/init.js` — proto map rebuild
 - `.spl/proto/stats/stats.js` — context statistics
 - `.spl/proto/context-view/context-view.js` — CONTEXT.md generator
+- `.spl/proto/evaluate/evaluator.js` — quality gate evaluator
+- `.spl/proto/evaluate/parser.js` — requirements parser
 - `projects/.spl/proto/tidy/tidy.js` — transient cleanup
 - `spl` — bash wrapper (sets SPL_ROOT, exec node)
 
@@ -110,8 +112,19 @@
 - `reference/context-layer/` — flat API, traversal, storage capabilities (from spl3/08)
 - `reference/evaluator/` — requirements evaluation pipeline (from spl3/09)
 
+## Evaluator Protocol
+- evaluate/run — full pipeline (prepare → translate → evaluate → report)
+- evaluate/status — check pipeline phase
+- Data-triggered: file presence determines what steps run
+- Transient context: .eval/ inside target project (gitignored)
+- callClaude: `claude --print --model haiku` with CLAUDECODE deleted
+- Parser: R-numbered format (`### R{n}:`) or section-based (`## {section}`)
+- mc.core.create API: (parentPath, key, content) — three args
+
 ## Carry Forward
-- Scope isolation / path rebasing
+- Protocol resolution through doc.map (operations currently hardcode mc module paths)
+- Cascading references (horizontal) and layering (vertical)
+- Path validation (no `../` traversal)
 - Schemas: Avro (avsc) — convention → metadata → RPC
 - Bare runtime for Pear P2P platform
 - mc.boot protocol when boot complexity demands it

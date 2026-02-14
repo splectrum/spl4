@@ -6,4 +6,5 @@ Thumbs.db
 .context-view/
 **/.spl/exec/data/
 **/.spl/exec/state/
+**/.eval/
 package-lock.json

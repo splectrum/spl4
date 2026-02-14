@@ -21,7 +21,7 @@
  *  11. Format output
  */
 
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Step 1: SPL_ROOT — read once, never again
@@ -78,6 +78,27 @@ try {
   // Attach map as non-enumerable (invisible to faf)
   Object.defineProperty(doc, 'map', {
     value: map,
+    enumerable: false
+  });
+
+  // POV — CWD relative to root
+  const prefix = relative(root, process.cwd()) || '.';
+  Object.defineProperty(doc, 'prefix', {
+    value: prefix,
+    enumerable: false
+  });
+
+  // Resolve resource path: CWD-relative → absolute mc path.
+  // Resources are relative to POV, can't escape above it.
+  // Functionality (modules, proto map) is root-relative.
+  Object.defineProperty(doc, 'resolvePath', {
+    value: function (path) {
+      const resolved = join(prefix, path);
+      if (resolved.startsWith('..') || (!resolved.startsWith(prefix) && prefix !== '.')) {
+        throw new Error(`path escapes context: ${path}`);
+      }
+      return '/' + resolved;
+    },
     enumerable: false
   });
 

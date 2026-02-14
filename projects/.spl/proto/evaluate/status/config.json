@@ -1,0 +1,5 @@
+{
+  "module": ".spl/proto/evaluate/evaluator.js",
+  "function": "status",
+  "format": "formatStatus"
+}

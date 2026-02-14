@@ -143,6 +143,15 @@ granularity: natural language (opaque) → structured file
 (fully explicit). All the same primitive at different
 resolution.
 
+**Point of view.** The working directory sets the reference
+context. Resources are relative to POV — you can only see
+what is in front of you, never behind. Functionality
+(operations, modules) is root-relative and always available.
+Paths are context-relative primary keys: the same resource
+has different identities from different viewpoints.
+Cascading references bring out-of-view resources into view
+and form the base level of permission.
+
 ### 1.7 Vision (Open, Not Proven)
 
 These are described in earlier principle documents and
@@ -152,9 +161,11 @@ and have not been proven in code.
 - **Polymorphic views** — same data accessed as relational,
   document, graph, key-value, or other patterns
 - **Cascading references** — cross-context reference graphs
-  as structural primitives
+  as structural primitives (POV principle proven, references
+  designed, not yet built)
 - **Location-transparent references** — identity independent
-  of physical location
+  of physical location (multiple context-relative PKs
+  designed, not yet built)
 - **Content-addressed integrity** — hash-based verification
 - **Schema evolution** — backward-compatible structural change
 - **Compaction** — history compression preserving capability

@@ -121,6 +121,82 @@ granularity: natural language (opaque) → structured file
 (fully explicit). All the same primitive at different
 resolution.
 
+## Point of View
+
+The working directory sets the **point of view** (POV).
+POV determines two things: what you can see, and how you
+identify it.
+
+### Resources and Functionality
+
+**Resources** — data you address and operate on — are
+relative to POV. You can only see what is in front of
+you. Paths go forward (into contexts below), never
+backward (above POV). A path is always relative to the
+current reference context.
+
+**Functionality** — protocol operations, modules, the
+proto map — is referenced to the repo root. Regardless
+of where you stand, all registered operations are
+available. You can use capabilities that live in the
+hidden part of the tree.
+
+This separation is structural: resources are scoped,
+functionality is global. An entity in `projects/` can
+invoke `evaluate/run` (functionality, root-registered)
+on `12-spl-protocol` (resource, relative to POV) but
+cannot address `../mycelium/model.md` (behind POV).
+
+### Paths as Identity
+
+Paths are primary keys. A key is meaningful only within
+its containing context — this is already a model
+primitive (§ The Primitive). POV extends this: the same
+resource has different paths from different viewpoints.
+
+From root: `projects/12-spl-protocol`
+From projects/: `12-spl-protocol`
+
+Both identify the same resource. The path is a
+context-relative URI — a scalable primary key that
+derives from position. Identity is not absolute; it is
+always relative to a reference context.
+
+### Cascading References
+
+When a resource is behind POV but access is required,
+**cascading references** bring it into view. A reference
+is a record in the current context that points to a
+resource elsewhere. The reference creates a local
+identity (path) for a remote resource.
+
+This means:
+- A resource can have multiple identities — one per
+  context that references it
+- Each identity is a valid PK within its context
+- References are the base level of permission: if you
+  can see a reference, you can follow it
+- No reference, no access — POV enforces the boundary
+
+References cascade: a context can reference a context
+that itself contains references. The graph of references
+defines the reachable set from any POV.
+
+### Implemented
+
+- `doc.prefix` — POV as CWD relative to root
+- `doc.resolvePath(path)` — resolve resource path from
+  POV to absolute mc path, rejecting escapes
+- Functionality paths (config.json module references)
+  remain root-relative
+- Resource paths in operator results are POV-relative
+
+### Not Yet Implemented
+
+- Cascading references (record type, traversal, graph)
+- Multiple UUID identity per resource
+- Reference-based permission model
+
 ## Real vs Virtual Contexts
 
 A context is either real (physically present) or virtual
