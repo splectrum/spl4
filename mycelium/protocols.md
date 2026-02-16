@@ -16,19 +16,48 @@ the exec doc:
 - **map** — the proto map. Non-enumerable property on
   the exec doc. Invisible to faf serialization, fully
   accessible in code.
-- **cwd** — current position relative to root. Tied to
-  scope isolation (see scope.md). Not yet implemented.
+- **prefix** — CWD relative to root. Set to `.` at
+  repo root, `projects` from projects/, etc. Resources
+  are resolved relative to prefix (POV). Functionality
+  is root-relative.
 
 Protocol operations receive session context through the
 exec doc at factory time. They don't read env vars or
 create their own state.
+
+## Three Output Channels
+
+Operations produce output through three distinct channels,
+each with its own concern:
+
+**Data state** — mycelium commits. Persistent, addressable,
+the visible result. When an operation creates or updates
+records, those changes live in mycelium. This is what
+matters after the operation completes.
+
+**Execution state** — the exec doc and faf drops. Detailed
+internal record of what happened: inputs, config, timing,
+results. Written to `.spl/exec/data/` as fire-and-forget
+drops. For offline analysis, audit, debugging. The operator
+returns metadata on the exec doc; boot persists it.
+
+**Realtime state** — stdout/stderr. What's happening right
+now. Boot captures the streams transparently — the operator
+writes to console normally, unaware of capture. Ideal for
+monitoring, progress, diagnostics. The captured stream
+becomes part of the execution record.
+
+The operator doesn't choose a channel — it naturally uses
+all three. Writes to mycelium are data state. Return values
+become execution state. Console output is realtime state.
+Boot infrastructure handles capture and persistence.
 
 ## The Stack
 
     mc.xpath        — resolve paths to locations
     mc.core         — five primitives (opaque bytes)
     mc.raw          — format interpretation, compound ops
-      ↑
+      ^
     mc.data         — user data view (.spl filtered out)
     mc.meta         — metadata view (.spl/meta/ scoped)
     mc.proto        — protocol resolution (.spl/proto/)
@@ -38,16 +67,15 @@ Not an operation executor — only resolves. Filesystem
 substrate today. Later: cascading references, layering,
 wider syntax.
 
-**mc.core** is the stable foundation. Six primitive
-operations (list, read, create, update, del, append).
+**mc.core** is the stable foundation. Five primitive
+operations (list, read, create, update, del).
 Buffer in, Buffer out. No format interpretation, no
-compound operations. The contract other protocols
-build on.
+compound operations. Primitives only.
 
 **mc.raw** delegates to mc.core and adds richer
 structural access. Format interpretation on read
 (binary, utf-8, JSON). Format detection on write
-(string → utf-8, object → JSON). Future: compound
+(string -> utf-8, object -> JSON). Future: compound
 operations (move, copy). Pre-semantic — no meaning
 in structures yet.
 
@@ -71,7 +99,7 @@ registrations change.
 Two distinct protocols, not versions of each other.
 
 mc.core is the primitives — the stable contract.
-Six operations, opaque bytes, minimal.
+Five operations, opaque bytes, minimal.
 
 mc.raw is richer structural access built on mc.core.
 Format interpretation, compound operations. Pre-semantic
@@ -80,29 +108,39 @@ will grow (move, copy); mc.core won't.
 
 ## Factory Pattern
 
-Protocol operations are async factories. The exported
-function takes an execution document, imports its mc
-dependencies via doc.root, and returns a bound operator:
+One pattern for everything. Every registered operation
+is a default-export async factory. The factory takes
+the exec doc, resolves its dependencies through
+`execDoc.resolve()`, and returns a bound operator:
 
-    export async function scan(execDoc) {
-      const proto = p => pathToFileURL(join(execDoc.root, p)).href;
-      const data = await import(proto('.spl/proto/mc.data/data.js'));
+    export default async function (execDoc) {
+      const coreRead = await execDoc.resolve('mc.core/read');
 
       return async function (path) {
-        // execDoc + data in closure
+        // coreRead + execDoc in closure
         // do work, return result
       };
     }
 
-The exec doc is bound once at factory time. mc modules
-are imported at factory time using doc.root — no env
-var dependency. The returned operator works with just
-operational arguments. No ambient state, no globals —
-everything lives in the closure.
+One file per operation. One default export per file.
+The exec doc is bound once at factory time. Dependencies
+resolved through `execDoc.resolve()` — the single way
+operations access other operations. The returned operator
+works with just operational arguments. No ambient state,
+no globals — everything lives in the closure.
 
-spl/boot creates the exec doc, calls the factory (await),
-invokes the operator, completes the doc. The operation
-just does its work.
+spl/boot creates the exec doc, resolves the operation
+via the map, calls the factory, invokes the operator,
+completes the doc. The operation just does its work.
+
+**Config is indirection.** Each operation has a config.json:
+
+    { "module": ".spl/proto/mc.core/read.js" }
+
+Just the module path. Default export means no function
+name needed. Config exists because code may not be local
+— spawned repos, cascading references, P2P, parent
+overrides child. The config is the seam.
 
 ## Calling Convention
 
@@ -129,34 +167,23 @@ The path is compact. A single path can address a
 location multiple protocol scopes deep without the
 caller needing to know where the boundaries are.
 
-## Registration
-
-Operations are registered in .spl/proto/ directories
-at the operation level:
-
-    .spl/proto/
-      stats/
-        collect/config.json
-      tidy/
-        scan/config.json
-        clean/config.json
-
-Each config.json specifies module, function, and
-optional format function:
-
-    {
-      "module": ".spl/proto/stats/stats.js",
-      "function": "collect",
-      "format": "format"
-    }
-
-Partial API registration: individual operations of a
-protocol can be registered at different contexts.
-
 ## Resolution
 
+**execDoc.resolve(key)** is the universal resolution
+mechanism. Given a protocol/operation key:
+
+1. Look up the map (cached on exec doc)
+2. Import the module (via config.module path)
+3. Call the default export factory with execDoc
+4. Cache the bound operator
+5. Return it
+
+All operations resolve dependencies this way. No direct
+imports between protocols. The map is the single source
+of truth for what's available and where it lives.
+
 **Proto map.** mc.proto scans all .spl/proto/ directories
-in the repo and builds a map: `protocol/operation` →
+in the repo and builds a map: `protocol/operation` ->
 context + config. Cached at .spl/exec/state/mc/proto/map.json.
 No staleness detection — the process that changes
 registrations calls rebuild. `spl spl init` is the
@@ -168,13 +195,39 @@ longest prefix match of target path — nearest to the
 target wins.
 
     spl tidy scan 08-dogfood
-    → lookup "tidy/scan" → found at /projects → invoke
+    -> lookup "tidy/scan" -> found at /projects -> invoke
 
 No separate global/local concept. mc bundles at root
 are naturally global (found from anywhere). Override
 by registering closer — naturally local. Same mechanism.
 
 See scope.md for execution context and path rebasing.
+
+## Registration
+
+Operations are registered in .spl/proto/ directories
+at the operation level. One pattern: protocol/operation.
+
+    .spl/proto/
+      mc.xpath/
+        resolve/config.json
+      mc.core/
+        list/config.json
+        read/config.json
+        create/config.json
+        update/config.json
+        del/config.json
+      stats/
+        collect/config.json
+      spl/
+        init/config.json
+
+Each config.json contains only the module path:
+
+    { "module": ".spl/proto/mc.core/read.js" }
+
+Partial API registration: individual operations of a
+protocol can be registered at different contexts.
 
 ## Execution Store
 

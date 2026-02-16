@@ -1,5 +1,1 @@
-{
-  "module": ".spl/proto/spl/init.js",
-  "function": "init",
-  "format": "format"
-}
+{ "module": ".spl/proto/spl/init.js" }

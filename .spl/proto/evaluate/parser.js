@@ -81,7 +81,12 @@ function parseSections(lines) {
 
     if (current) {
       const numMatch = line.match(/^\d+\.\s+(.+)/);
-      if (numMatch) current.gates.push(numMatch[1].trim());
+      if (numMatch) {
+        current.gates.push(numMatch[1].trim());
+      } else if (current.gates.length > 0 && line.match(/^\s+\S/)) {
+        // Continuation line — append to current gate
+        current.gates[current.gates.length - 1] += ' ' + line.trim();
+      }
       current.textLines.push(line);
     }
   }
@@ -117,7 +122,12 @@ function parseGates(lines) {
     if (inGates && line.match(/^## /)) break;
     if (inGates) {
       const bulletMatch = line.match(/^- (.+)/);
-      if (bulletMatch) gates.push(bulletMatch[1].trim());
+      if (bulletMatch) {
+        gates.push(bulletMatch[1].trim());
+      } else if (gates.length > 0 && line.match(/^\s+\S/)) {
+        // Continuation line — append to current gate
+        gates[gates.length - 1] += ' ' + line.trim();
+      }
     }
   }
 

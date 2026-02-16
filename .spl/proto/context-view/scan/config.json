@@ -1,5 +1,1 @@
-{
-  "module": ".spl/proto/context-view/context-view.js",
-  "function": "scan",
-  "format": "formatScanResult"
-}
+{ "module": ".spl/proto/context-view/scan.js" }

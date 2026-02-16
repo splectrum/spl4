@@ -3,36 +3,35 @@
  *
  * Usage: spl <protocol> <operation> [path] [args...]
  *
- * spl/boot is the entry point — the one hardcoded
- * operation. It can't resolve itself via a map that
- * doesn't exist yet.
+ * Receives a seed doc (JSON) as first argument from the
+ * wrapper. The seed contains root and raw argv. spl.mjs
+ * reads everything from the seed — no env vars.
  *
  * Boot sequence:
- *   1. Read SPL_ROOT from env (the one seam)
+ *   1. Parse seed doc (root + argv)
  *   2. Import mc.proto/map.js (module cache persists it)
  *   3. Ensure proto map (load or build)
- *   4. Import mc.exec (module cache)
- *   5. Create exec doc (root enumerable, map non-enumerable)
+ *   4. Import mc.exec/create + complete (seed as factory input)
+ *   5. Create exec doc
  *   6. faf start drop
  *   7. Resolve protocol/operation
- *   8. Import module, call factory(doc), get operator
- *   9. Invoke operator with args
- *  10. faf complete drop
- *  11. Format output
+ *   8. Import module, call default export factory(doc), get operator
+ *   9. Capture stdout/stderr
+ *  10. Invoke operator with args
+ *  11. Stop capture, persist output
+ *  12. faf complete drop
+ *  13. Output result as JSON
  */
 
 import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// Step 1: SPL_ROOT — read once, never again
-const root = process.env.SPL_ROOT;
-if (!root) {
-  console.error('spl: SPL_ROOT not set');
-  process.exit(1);
-}
-
-const protoName = process.argv[2];
-const operation = process.argv[3];
+// Step 1: Parse seed doc
+const seed = JSON.parse(process.argv[2]);
+const root = seed.root;
+const protoName = seed.argv[0];
+const operation = seed.argv[1];
+const args = seed.argv.slice(2);
 
 if (!protoName) {
   console.error('spl: usage: spl <protocol> <operation> [path] [args...]');
@@ -55,8 +54,11 @@ try {
   );
   const map = mapModule.ensure(root);
 
-  // Step 4: Load exec module
-  const exec = await import(toURL('.spl/proto/mc.exec/exec.js'));
+  // Step 4: Load exec operations (seed as factory input)
+  const execCreateMod = await import(toURL('.spl/proto/mc.exec/create.js'));
+  const execCreate = await execCreateMod.default(seed);
+  const execCompleteMod = await import(toURL('.spl/proto/mc.exec/complete.js'));
+  const execComplete = await execCompleteMod.default(seed);
 
   // Step 7: Resolve protocol/operation
   const key = `${protoName}/${operation}`;
@@ -68,12 +70,12 @@ try {
 
   const { context, config } = reg;
 
-  if (!config.module || !config.function) {
-    throw new Error(`"${key}" missing module or function in config`);
+  if (!config.module) {
+    throw new Error(`"${key}" missing module in config`);
   }
 
   // Step 5-6: Create exec doc with faf start
-  const doc = exec.create(protoName, context, root);
+  const doc = execCreate(protoName, context);
 
   // Attach map as non-enumerable (invisible to faf)
   Object.defineProperty(doc, 'map', {
@@ -88,7 +90,7 @@ try {
     enumerable: false
   });
 
-  // Resolve resource path: CWD-relative → absolute mc path.
+  // Resolve resource path: CWD-relative -> absolute mc path.
   // Resources are relative to POV, can't escape above it.
   // Functionality (modules, proto map) is root-relative.
   Object.defineProperty(doc, 'resolvePath', {
@@ -102,35 +104,58 @@ try {
     enumerable: false
   });
 
-  // Step 8: Import module, get factory, bind operator
+  // mc.proto/resolve — bootstrap from map, bind to doc
+  const resolveMod = await import(toURL('.spl/proto/mc.proto/resolve.js'));
+  const resolve = await resolveMod.default(doc);
+  Object.defineProperty(doc, 'resolve', {
+    value: resolve,
+    enumerable: false
+  });
+
+  // Step 8: Import module, get default export factory, bind operator
   const mod = await import(toURL(config.module));
-  const factory = mod[config.function];
+  const factory = mod.default;
   if (typeof factory !== 'function') {
-    throw new Error(`"${key}": ${config.function} is not a function`);
+    throw new Error(`"${key}": default export is not a function`);
   }
 
   const operator = await factory(doc);
 
-  // Step 9: Invoke with remaining args
-  const args = process.argv.slice(4);
+  // Step 9: Capture stdout/stderr
+  const captured = { stdout: [], stderr: [] };
+  const origStdoutWrite = process.stdout.write.bind(process.stdout);
+  const origStderrWrite = process.stderr.write.bind(process.stderr);
+
+  process.stdout.write = function (chunk, encoding, callback) {
+    captured.stdout.push(typeof chunk === 'string' ? chunk : chunk.toString());
+    return origStdoutWrite(chunk, encoding, callback);
+  };
+
+  process.stderr.write = function (chunk, encoding, callback) {
+    captured.stderr.push(typeof chunk === 'string' ? chunk : chunk.toString());
+    return origStderrWrite(chunk, encoding, callback);
+  };
+
+  // Step 10: Invoke with remaining args
   const result = await operator(...args);
 
-  // Step 10: Complete
-  doc.result = result;
-  exec.complete(doc);
+  // Step 11: Stop capture
+  process.stdout.write = origStdoutWrite;
+  process.stderr.write = origStderrWrite;
 
-  // Step 11: Output
+  // Persist captured output on exec doc
+  const stdout = captured.stdout.join('');
+  const stderr = captured.stderr.join('');
+  if (stdout) doc.stdout = stdout;
+  if (stderr) doc.stderr = stderr;
+
+  // Step 12: Complete
+  doc.result = result;
+  execComplete(doc);
+
+  // Step 13: Output
   if (result !== undefined) {
-    if (config.format) {
-      const formatter = mod[config.format];
-      if (typeof formatter === 'function') {
-        console.log(formatter(result));
-      } else {
-        console.log(JSON.stringify(result, null, 2));
-      }
-    } else {
-      console.log(JSON.stringify(result, null, 2));
-    }
+    console.log(JSON.stringify(result, null, 2));
   }
 } catch (e) {
   console.error(`spl: ${e.message}`);

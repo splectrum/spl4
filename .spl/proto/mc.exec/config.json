@@ -1,4 +1,0 @@
-{
-  "module": ".spl/proto/mc.exec/exec.js",
-  "help": "Execution store — global log and local working state"
-}

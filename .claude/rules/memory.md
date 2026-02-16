@@ -14,7 +14,7 @@
 ## The Model (proven)
 - Record = key → content (opaque bytes)
 - Context = container of records (recursive)
-- Eight operations: list, read, flatten, create, write, delete, append, move
+- Seven operations: list, read, create, update, del (+ flatten, move planned)
 - Three layers: logical, capability, physical
 - Flat API, metadata-driven behavior, nearest distance
 - Changelog as sibling record, three modes
@@ -48,64 +48,70 @@
 - haicc/ — the creative world (build cycle, spawn, evaluator)
 - exploratory-repo/ — context type for this kind of repo
 
-## Protocol Architecture (current as of project 12)
+## Protocol Architecture (current as of project 14)
 
-### spl as protocol
-- spl is a registered protocol with operations
-- spl/boot is hardcoded entry point (can't resolve itself)
-- spl/init rebuilds proto map (`spl spl init`)
+### Boot sequence (spl.mjs)
+- Bash wrapper `spl` discovers root via `git rev-parse --show-toplevel`
+- Builds seed doc: `{"root":"...","argv":[...]}`, passes as JSON arg
+- spl.mjs parses seed, boots mc.proto/map, mc.exec, mc.proto/resolve
+- No env vars — everything from seed doc
 
-### Factory pattern (from spl2)
-- Async factories: exported function takes exec doc,
-  imports mc deps via doc.root, returns bound operator
-- No env var dependency in protocol operations
-- spl/boot creates exec doc, awaits factory, invokes operator
+### Uniform factory pattern (P1)
+- Every registered operation: default export async factory(execDoc) → operator
+- config.json: `{ "module": "..." }` — only module path, nothing else
+- Boot creates exec doc, attaches map + prefix + resolvePath + resolve
+- Shared protocol internals in lib.js (not registered)
 
-### Session (exec doc)
-- doc.root — repo root (enumerable, appears in faf)
+### Exec doc (static data state)
+- doc.root — repo root (enumerable)
 - doc.map — proto map (non-enumerable, invisible to faf)
-- SPL_ROOT read once by spl/boot, never by operations
+- doc.prefix — CWD relative to root (non-enumerable)
+- doc.resolvePath — CWD-relative → absolute mc path (non-enumerable)
+- doc.resolve — mc.proto/resolve operator (non-enumerable)
 
-### Persistence model
-- Code: module cache (mc.proto/map.js loaded once per process)
-- Data: proto map as module-level variable + non-enumerable on exec doc
-- Cross-process: map.json on disk, no staleness detection
-- Rebuild: explicit via spl/init or mapModule.rebuild()
+### Three channels (P4)
+- Data state: mycelium (mc.core/mc.data/mc.raw/mc.meta)
+- Execution state: exec doc + faf (mc.exec)
+- Realtime state: stdout/stderr captured by boot
 
 ### Protocol stack
+- mc.proto — resolve (map-based protocol resolution)
 - mc.xpath — resolve paths to Locations
-- mc.core — six primitives + append (stable contract)
+- mc.core — five primitives (list, read, create, update, del)
 - mc.raw — format layer on mc.core (pre-semantic)
 - mc.data — user data view (.spl filtered)
 - mc.meta — metadata view (.spl/meta/ scoped)
-- mc.proto — protocol resolution (map-based)
+- mc.exec — execution state (create, drop, complete, fail)
 
-### Registration (operation-level)
+### Registration
 - .spl/proto/<protocol>/<operation>/config.json
-- Config: module, function, format
 - Proto map: protocol/operation → context + config
 - Longest prefix match for multiple registrations
+- Bootstrap: spl/init imports mc.proto/map directly (can't resolve itself)
+- Bootstrap: spl.mjs imports mc.proto/resolve directly (attaches to doc)
 
 ### Dev vs deployed
 - Deployed code in .spl/proto/ (running)
 - Dev/reference copies in project src/
 
 ## Deployed Code
-- `.spl/spl.mjs` — spl/boot entry point
+- `spl` — bash wrapper (discovers root via git, seed doc as JSON arg)
+- `.spl/spl.mjs` — boot entry point (parses seed, no env vars)
 - `.spl/proto/mc.proto/map.js` — proto map builder/resolver
-- `.spl/proto/mc.exec/exec.js` — faf execution store
+- `.spl/proto/mc.proto/resolve.js` — protocol resolution operator
 - `.spl/proto/mc.xpath/resolve.js` — location resolver
-- `.spl/proto/mc.core/core.js` — six primitives
-- `.spl/proto/mc.raw/raw.js` — format layer on mc.core
-- `.spl/proto/mc.data/data.js` — user data view
-- `.spl/proto/mc.meta/meta.js` — metadata view
+- `.spl/proto/mc.core/{list,read,create,update,del}.js` — five primitives
+- `.spl/proto/mc.raw/{list,read,create,update,del}.js` — format layer
+- `.spl/proto/mc.data/{list,read,create,update,del}.js` — user data view
+- `.spl/proto/mc.meta/{list,read,create,update,del}.js` — metadata view
+- `.spl/proto/mc.exec/{lib,create,drop,complete,fail}.js` — execution state
 - `.spl/proto/spl/init.js` — proto map rebuild
-- `.spl/proto/stats/stats.js` — context statistics
-- `.spl/proto/context-view/context-view.js` — CONTEXT.md generator
-- `.spl/proto/evaluate/evaluator.js` — quality gate evaluator
-- `.spl/proto/evaluate/parser.js` — requirements parser
-- `projects/.spl/proto/tidy/tidy.js` — transient cleanup
-- `spl` — bash wrapper (sets SPL_ROOT, exec node)
+- `.spl/proto/stats/collect.js` — context statistics
+- `.spl/proto/context-view/{lib,sync,scan}.js` — CONTEXT.md generator
+- `.spl/proto/evaluate/{lib,run,status,parser}.js` — quality gate evaluator
+- `.spl/proto/test/{lib,run}.js` + suites/ — test harness + library
+- `projects/.spl/proto/evaluate/{run,status}/config.json` — project-scoped
+- `projects/.spl/proto/tidy/{lib,scan,clean}.js` — transient cleanup
 
 ## Reference Code
 - `reference/context-view/` — CONTEXT.md generator (from spl3/05)
@@ -113,20 +119,58 @@
 - `reference/evaluator/` — requirements evaluation pipeline (from spl3/09)
 
 ## Evaluator Protocol
-- evaluate/run — full pipeline (prepare → translate → evaluate → report)
+- evaluate/run — full pipeline with haiku retry (callClaude/tryCallClaude)
 - evaluate/status — check pipeline phase
 - Data-triggered: file presence determines what steps run
 - Transient context: .eval/ inside target project (gitignored)
 - callClaude: `claude --print --model haiku` with CLAUDECODE deleted
 - Parser: R-numbered format (`### R{n}:`) or section-based (`## {section}`)
+- Multi-line gate parsing (numbered items and bullets)
 - mc.core.create API: (parentPath, key, content) — three args
 
-## Carry Forward
-- Protocol resolution through doc.map (operations currently hardcode mc module paths)
-- Cascading references (horizontal) and layering (vertical)
-- Path validation (no `../` traversal)
+## Implementation Patterns (project 14)
+- P1: Uniform Factory — default export, takes execDoc, returns operator
+- P2: Config as Indirection — config.json has only module path
+- P3: Lib Convention — shared internals in lib.js, not registered
+- P4: Three Channels — data state, execution state, realtime state
+- P5: Minimize Conditionals — normalize data, don't branch
+- P6: Point of View — resources CWD-relative, functionality root-relative
+- P7: Resolution Through Map — execDoc.resolve for all cross-protocol access
+- Patterns documented in mycelium/patterns.md
+- Quality gates: functional + pattern (splectrum/quality-gates.md)
+- Autonomy gap analysis in splectrum/autonomy.md
+
+## spl4 Scope (agreed)
+1. Uniform factory pattern + bug fixes (project 14, code done, needs test verification + commit)
+2. Cascading references, layering, virtual contexts —
+   documentation overlay use case, agents with blinkers.
+   References bring out-of-view data into view (read-only).
+   Local copy overlays reference (copy-on-write, nearest
+   distance). Evaluator can compare old vs proposed.
+3. mc.raw compound operations (move, copy) — fit in where needed
+4. Stream consumers for exec data — simple processing first
+5. Model + spawn protocol (capstone) — model/ folder as
+   full mycelium install (autonomous, self-sufficient).
+   Parent mycelium (spl4) can run/override operations on
+   it. Two modes: from within = model's mc runs; from
+   parent = parent's mc operates on model as resource.
+   Spawn analyzes model, builds install package, seeds
+   new git repo. Foundation for multi-repository.
+   Every spawned repo is autonomous but governable by parent.
+
+## spl4 Exit Gate
+- Critical review of spl4 (like spl2 review that seeded spl3/spl4)
+- Assess autonomy gap: where did pattern gates catch issues
+  vs where human intervention was still needed
+- Set roadmap for spl5 and beyond based on evidence
+
+## Roadmap (outside spl4)
+- Multiple UUID identity per resource (context-relative PKs)
+- Reference-based permission model
 - Schemas: Avro (avsc) — convention → metadata → RPC
-- Bare runtime for Pear P2P platform
 - mc.boot protocol when boot complexity demands it
-- mc.raw compound operations (move, copy)
-- Stream consumers for exec data
+- Bare runtime for Pear P2P platform
+- Polymorphic views, content-addressed integrity
+- Schema evolution, compaction
+- API crystallization, layered know-how
+- P2P / federation

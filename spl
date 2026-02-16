@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export SPL_ROOT=$(git rev-parse --show-toplevel)
-exec node "$SPL_ROOT/.spl/spl.mjs" "$@"
+ROOT=$(git rev-parse --show-toplevel)
+
+# Build seed doc: root + raw argv as JSON
+ARGV='['
+for i in "$@"; do
+  [ "$ARGV" != '[' ] && ARGV+=','
+  ARGV+="\"$i\""
+done
+ARGV+=']'
+
+exec node "$ROOT/.spl/spl.mjs" "{\"root\":\"$ROOT\",\"argv\":$ARGV}"

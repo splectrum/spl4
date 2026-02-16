@@ -1,5 +1,1 @@
-{
-  "module": ".spl/proto/stats/stats.js",
-  "function": "collect",
-  "format": "format"
-}
+{ "module": ".spl/proto/stats/collect.js" }
