@@ -117,6 +117,55 @@ a system that would do everything. What was actually built
 is narrower but coherent: a context-centric model where
 structure determines behavior.
 
+## Context Management
+
+The primary bottleneck for AI effectiveness is not
+intelligence but what is in view. Context is the lens.
+Wrong context, wrong output.
+
+Current approaches are externally prescribed. RAG retrieves
+by textual similarity, not by meaning or purpose. Context
+engineering frameworks give humans tools to manage AI
+context. In all cases, something external decides what the
+AI sees. The AI is a passive consumer.
+
+Mycelium inverts this. It provides structural tools two
+steps removed from context:
+
+    Structural tools (mycelium)
+        → Data preparation (AI-controlled)
+            → Context (what AI sees)
+
+The AI controls both preparation and organization. Mycelium
+provides primitives — contexts, records, references,
+overlay, nearest distance — not policy. No opinion about
+what should be in context. Just the mechanical ability to
+organize, layer, internalize, and reference.
+
+**Internalization.** Mycelium doesn't just proxy or cache
+external data. It internalizes: transforms external
+knowledge into a context-optimized form. The original may
+sit alongside as a local copy, but the value is in the
+internalized version — structured, layered, linked for
+the context it serves.
+
+**Two facets of cascading references:**
+- **Repository facet** — folder-to-remote mapping,
+  transparent traversal, local overlay (nearest distance).
+  The mechanical capability.
+- **Meaning facet** — links as visible connections between
+  knowledge. AI-built hierarchies optimized for minimal
+  context pollution with maximal coverage. The structure
+  itself as an attention mechanism.
+
+As agents mature, they need to manage their own knowledge
+— not have it managed for them. The structure should evolve
+with the agent's capability, not be locked to today's
+assumptions.
+
+Everyone else is building better retrieval. Mycelium builds
+better organization and puts the AI in charge of it.
+
 ## Open Vision
 
 These remain as direction, not yet proven:

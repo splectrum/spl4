@@ -160,9 +160,14 @@ and have not been proven in code.
 
 - **Polymorphic views** — same data accessed as relational,
   document, graph, key-value, or other patterns
-- **Cascading references** — cross-context reference graphs
-  as structural primitives (POV principle proven, references
-  designed, not yet built)
+- **Cascading references (repository facet)** — folder-to-remote
+  mapping with transparent traversal. Local overlay via nearest
+  distance. Internalized data (context-optimized view) alongside
+  optional local copy of source. (POV principle proven, building)
+- **Cascading references (meaning facet)** — links as visible
+  connections. AI-controlled knowledge hierarchies optimized for
+  minimal context pollution with maximal coverage. The structure
+  itself as an attention mechanism. (post-spl4)
 - **Location-transparent references** — identity independent
   of physical location (multiple context-relative PKs
   designed, not yet built)

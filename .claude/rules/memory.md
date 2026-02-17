@@ -141,15 +141,20 @@
 - Autonomy gap analysis in splectrum/autonomy.md
 
 ## spl4 Scope (agreed)
-1. Uniform factory pattern + bug fixes (project 14, code done, needs test verification + commit)
-2. Cascading references, layering, virtual contexts —
-   documentation overlay use case, agents with blinkers.
-   References bring out-of-view data into view (read-only).
-   Local copy overlays reference (copy-on-write, nearest
-   distance). Evaluator can compare old vs proposed.
-3. mc.raw compound operations (move, copy) — fit in where needed
-4. Stream consumers for exec data — simple processing first
-5. Model + spawn protocol (capstone) — model/ folder as
+1. ~~Uniform factory pattern + bug fixes~~ (project 14, done)
+2. Cascading references — repository facet (project 15).
+   Folder-to-remote mapping, mc.xpath traverses transparently.
+   Local overlay (nearest distance). Internalized data
+   (context-optimized view) alongside optional local copy
+   of source. Meaning facet (links, AI-optimized
+   hierarchies, context pollution vs spread) → post-spl4.
+3. mc.git protocol + changelog view — formalize git
+   operations into a protocol, changelog as view over
+   git data (not separate storage). Impacts mc.raw
+   compound ops (move/copy need git awareness).
+4. mc.raw compound operations (move, copy) — git-aware
+5. Stream consumers for exec data — simple processing first
+6. Model + spawn protocol (capstone) — model/ folder as
    full mycelium install (autonomous, self-sufficient).
    Parent mycelium (spl4) can run/override operations on
    it. Two modes: from within = model's mc runs; from
@@ -168,6 +173,7 @@
 - Multiple UUID identity per resource (context-relative PKs)
 - Reference-based permission model
 - Schemas: Avro (avsc) — convention → metadata → RPC
+- mc.xpath/resolve → mc.xpath/select (XPath naming)
 - mc.boot protocol when boot complexity demands it
 - Bare runtime for Pear P2P platform
 - Polymorphic views, content-addressed integrity

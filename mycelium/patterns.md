@@ -165,6 +165,34 @@ changing the consumer.
 
 ---
 
+## P8: Internal Efficiency
+
+**Principle:** The protocol hierarchy serves the user, not
+the implementation.
+
+**Pattern:** mc protocols use the most efficient access
+method to their own operational data. The protocol stack
+(mc.data, mc.raw, mc.core, mc.meta) is a user-facing
+abstraction. Internal implementation accesses what it
+needs directly — filesystem, memory, whatever the
+substrate provides.
+
+**Requirements:**
+- User-requested data goes through the mc protocol hierarchy
+- Internal/system data access may bypass the hierarchy
+- No circular dependencies introduced for the sake of
+  "going through the stack"
+- The substrate layer (mc.xpath) reads its own operational
+  data directly from the substrate
+
+**Example:** mc.xpath reads `.spl/data/refs.json` directly
+from the filesystem. Going through mc.meta → mc.core →
+mc.xpath would create a circular dependency. mc.xpath is
+the substrate-aware layer — direct filesystem access is
+the most efficient and correct method.
+
+---
+
 ## Pattern Evolution
 
 Patterns are not permanent. They evolve through the same
