@@ -87,6 +87,35 @@ system: meaning → structure → evidence → evolved meaning.
 The patterns themselves are subject to the cycle — they
 get refined through use.
 
+## Process Adoption Roadmap
+
+Process standards (process/) define how the build cycle
+works. Making agents actively follow them is itself an
+autonomy progression:
+
+**1. Evaluator checks process compliance.** The feedback
+loop. Results are measured against process standards.
+The agent has reason to consult process docs — not
+because it's told to, but because evaluation happens.
+Creates natural flow through incentive.
+
+**2. Convention enforced by structure.** Naming
+conventions, structural signals, predictable layout.
+The agent naturally finds what it needs at the moment
+it needs it. Grows from experience with evaluation.
+
+**3. Protocol-driven build cycle.** Process becomes
+executable. Structure helps when natural flow is not
+restricted — it removes the need to remember without
+forced guardrails. The agent is guided through steps,
+not commanded. Earned through maturity from steps 1–2.
+
+CLAUDE.md pointers ("read this before starting") are
+explicitly discarded — that's prompt-driven, not
+structural. The goal is natural flow: the environment
+makes the right behavior obvious, evaluation confirms
+it, protocol removes friction.
+
 ## Relationship to HAICC
 
 Section 3.2 of PRINCIPLES.md: "Maximum beneficial

@@ -198,7 +198,7 @@ export const tests = {
     assert.ok(layers.refs['ref-file.md'], 'refs should contain ref-file.md');
   },
 
-  // --- Phase 3: mc.core/list merging ---
+  // --- Phase 3: mc.core integration ---
 
   async 'mc.core/list includes reference entries'(doc, assert) {
     const list = await doc.resolve('mc.core/list');
@@ -380,6 +380,21 @@ export const tests = {
     await del('/projects/15-cascading-references/docs/PRINCIPLES.md');
     const restored = await resolve('/projects/15-cascading-references/docs/PRINCIPLES.md');
     assert.equal(restored.source, 'reference', 'reference should re-emerge');
+  },
+
+  // --- Phase 5: process reference (project 16) ---
+
+  async 'e2e: process folder referenced into project 16'(doc, assert) {
+    const list = await doc.resolve('mc.data/list');
+    const entries = await list('/projects/16-process-standards');
+    const names = entries.map(e => e.path.split('/').pop());
+    assert.ok(names.includes('process'), 'project 16 should see process/ through reference');
+  },
+
+  async 'e2e: read process doc through reference'(doc, assert) {
+    const read = await doc.resolve('mc.core/read');
+    const buf = await read('/projects/16-process-standards/process/build-cycle.md');
+    assert.ok(buf.toString().includes('Build Cycle'), 'should read build-cycle.md through reference');
   },
 
   // --- Teardown ---
