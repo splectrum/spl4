@@ -62,7 +62,9 @@ Rules:
 - Be specific about what changed, not generic
 - Reference specific files/functions when meaningful
 - Do NOT include Co-Authored-By (added automatically)
-- Output ONLY the commit message, nothing else`;
+- Output ONLY the raw commit message text
+- No preamble, no commentary, no code fences
+- Start directly with the summary line`;
 
     const commitMsg = callClaude(prompt);
 
@@ -95,10 +97,25 @@ function callClaude(prompt) {
   const env = { ...process.env };
   delete env.CLAUDECODE;
   try {
-    return execSync(
+    let result = execSync(
       'claude --print --model haiku',
       { input: prompt, encoding: 'utf-8', maxBuffer: 1024 * 1024, env }
     ).trim();
+
+    // Strip code fences if Claude wrapped the response
+    result = result.replace(/^```[^\n]*\n?/, '').replace(/\n?```$/, '');
+
+    // Strip preamble before the actual commit message
+    // (e.g. "Here's the commit message:" or similar)
+    const lines = result.split('\n');
+    const firstMeaningful = lines.findIndex(l =>
+      l && !l.match(/^(here|looking|based|the commit|this is|sure|okay|ok\b)/i)
+    );
+    if (firstMeaningful > 0) {
+      result = lines.slice(firstMeaningful).join('\n');
+    }
+
+    return result.trim();
   } catch {
     return 'checkpoint';
   }
