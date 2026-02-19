@@ -234,6 +234,116 @@ Respond in this exact JSON format:
     }
   }
 
+  /** Process compliance — check artifacts against process requirements */
+  async function checkCompliance(projectPath) {
+    const complianceFile = evalPath(projectPath, 'compliance-report.md');
+    if (await exists(complianceFile)) {
+      return { content: await rawRead(complianceFile, 'utf-8'), cached: true };
+    }
+
+    // Discover process requirements through references
+    let processEntries;
+    try {
+      processEntries = await dataList(projectPath + '/process');
+    } catch {
+      return null; // No process/ in scope — skip compliance
+    }
+
+    const reqFiles = processEntries
+      .filter(e => e.type === 'file' && e.path.split('/').pop().startsWith('req-'));
+
+    if (reqFiles.length === 0) return null;
+
+    // Determine which req files apply
+    const hasRequirements = await exists(projectPath + '/REQUIREMENTS.md');
+    const hasEvaluation = await exists(projectPath + '/EVALUATION.md');
+    let hasQualityGates = false;
+    if (hasRequirements) {
+      const reqContent = await rawRead(projectPath + '/REQUIREMENTS.md', 'utf-8');
+      hasQualityGates = /^## Quality Gates/m.test(reqContent);
+    }
+
+    const applicable = reqFiles.filter(e => {
+      const name = e.path.split('/').pop();
+      if (name === 'req-project.md' || name === 'req-build-cycle.md') return true;
+      if (name === 'req-requirements.md') return hasRequirements;
+      if (name === 'req-evaluation.md') return hasEvaluation;
+      if (name === 'req-quality-gates.md') return hasQualityGates;
+      return false;
+    });
+
+    if (applicable.length === 0) return null;
+
+    // Collect artifacts (reuse if already in .eval/)
+    let artifactsMd;
+    try {
+      artifactsMd = await rawRead(evalPath(projectPath, 'artifacts.md'), 'utf-8');
+    } catch {
+      const artifacts = await collectArtifacts(projectPath);
+      artifactsMd = artifacts.map(a => `--- ${a.path} ---\n${a.content}`).join('\n\n');
+    }
+
+    await ensureEvalDir(projectPath);
+
+    // Evaluate each applicable process requirement
+    const results = [];
+    for (const entry of applicable) {
+      const reqName = entry.path.split('/').pop().replace('.md', '');
+      const reqContent = await rawRead(entry.path, 'utf-8');
+      const requirements = parseRequirements(reqContent);
+
+      const prompt = `Check whether these project artifacts comply with this process requirement.
+
+PROCESS REQUIREMENT: ${reqName}
+${reqContent}
+
+For each requirement (R1, R2, etc.), determine PASS or FAIL based on the artifacts.
+
+Respond in this exact JSON format:
+{
+  "gates": [
+    {
+      "gate": "R1: requirement title",
+      "pass": true,
+      "explanation": "why it passes or fails"
+    }
+  ]
+}`;
+
+      const combined = `${prompt}\n\nARTIFACTS:\n${artifactsMd}`;
+      const gates = callClaude(combined);
+
+      results.push({
+        source: reqName,
+        requirements: requirements.length,
+        gates,
+        pass: gates.every(g => g.pass),
+      });
+    }
+
+    // Build compliance report
+    const allPass = results.every(r => r.pass);
+    const lines = ['# Process Compliance Report', ''];
+    lines.push(`Overall: ${allPass ? 'PASS' : 'FAIL'}`);
+    lines.push('');
+
+    for (const result of results) {
+      const icon = result.pass ? 'PASS' : 'FAIL';
+      lines.push(`## ${result.source} — ${icon}`);
+      lines.push('');
+      for (const gate of result.gates) {
+        const gateIcon = gate.pass ? '[x]' : '[ ]';
+        lines.push(`- ${gateIcon} ${gate.gate}`);
+        if (gate.explanation) lines.push(`  ${gate.explanation}`);
+      }
+      lines.push('');
+    }
+
+    const content = lines.join('\n');
+    await writeEvalFile(projectPath, 'compliance-report.md', content);
+    return { content, results, allPass };
+  }
+
   // The operator
   return async function (projectPath) {
     const target = execDoc.resolvePath(projectPath);
@@ -243,15 +353,28 @@ Respond in this exact JSON format:
     await evaluate(target);
     const result = await buildReport(target);
 
+    // Process compliance (separate report)
+    const compliance = await checkCompliance(target);
+
     if (!result) {
       return { project: projectPath, error: 'Could not assemble report' };
     }
 
-    return {
+    const output = {
       project: projectPath,
       pass: result.allPass,
       results: result.results,
       report: result.content,
     };
+
+    if (compliance && !compliance.cached) {
+      output.compliance = {
+        pass: compliance.allPass,
+        results: compliance.results,
+        report: compliance.content,
+      };
+    }
+
+    return output;
   };
 }
