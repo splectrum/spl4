@@ -43,7 +43,7 @@ export default async function (execDoc) {
       : diffDetail;
 
     // Ask Claude to write the commit message
-    const prompt = `Write a git commit message for these changes.
+    const prompt = `Write a git commit message. The caller provides the intent (the "why"), you add the detail (the "what") from the diff.
 
 INTENT: ${intent}
 
@@ -56,14 +56,12 @@ ${diff}
 DIFF DETAIL:
 ${trimmedDiff}
 
-Rules:
-- First line: concise summary (max 72 chars), imperative mood
-- Blank line, then body paragraphs explaining what and why
-- Be specific about what changed, not generic
-- Reference specific files/functions when meaningful
-- Do NOT include Co-Authored-By (added automatically)
-- Output ONLY the raw commit message text
-- No preamble, no commentary, no code fences
+Format:
+- Line 1: the intent as summary (keep it, max 72 chars)
+- Line 2: blank
+- Lines 3+: short body (3-6 lines max) noting key changes from the diff
+- Be specific: name files, functions, patterns — not generic descriptions
+- No Co-Authored-By, no preamble, no code fences, no commentary
 - Start directly with the summary line`;
 
     const commitMsg = callClaude(prompt);
