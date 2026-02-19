@@ -49,7 +49,7 @@
 - process/ — actionable process standards (guidance + requirements)
 - exploratory-repo/ — context type for this kind of repo
 
-## Protocol Architecture (current as of project 14)
+## Protocol Architecture (current as of project 17)
 
 ### Boot sequence (spl.mjs)
 - Bash wrapper `spl` discovers root via `git rev-parse --show-toplevel`
@@ -83,6 +83,7 @@
 - mc.data — user data view (.spl filtered)
 - mc.meta — metadata view (.spl/meta/ scoped)
 - mc.exec — execution state (create, drop, complete, fail)
+- git — version control substrate (status, checkpoint, log, changelog)
 
 ### Registration
 - .spl/proto/<protocol>/<operation>/config.json
@@ -110,7 +111,8 @@
 - `.spl/proto/spl/init.js` — proto map rebuild
 - `.spl/proto/stats/collect.js` — context statistics
 - `.spl/proto/context-view/{lib,sync,scan}.js` — CONTEXT.md generator
-- `.spl/proto/evaluate/{lib,run,status,parser}.js` — quality gate evaluator
+- `.spl/proto/evaluate/{lib,run,status,parser}.js` — quality gate evaluator + process compliance
+- `.spl/proto/git/{lib,checkpoint,status,log,changelog}.js` — git substrate protocol
 - `.spl/proto/test/{lib,run}.js` + suites/ — test harness + library
 - `projects/.spl/proto/evaluate/{run,status}/config.json` — project-scoped
 - `projects/.spl/proto/tidy/{lib,scan,clean}.js` — transient cleanup
@@ -150,6 +152,19 @@
 - Parser: R-numbered format (`### R{n}:`) or section-based (`## {section}`)
 - Multi-line gate parsing (numbered items and bullets)
 - mc.core.create API: (parentPath, key, content) — three args
+- Process compliance: checkCompliance reads process/req-*.md through
+  cascading references, determines applicability by artifact presence,
+  produces compliance-report.md in .eval/
+
+## Git Protocol (project 17)
+- git/ not mc.git/ — external substrate, not data model
+- git/checkpoint — stage + commit + push, Claude-generated commit messages
+  (caller provides intent/headline, haiku agent fills detail from diff)
+- git/status — structured file status scoped to path
+- git/log — structured commit history scoped to path
+- git/changelog — reverse changelog: derived markdown from git history
+- git/lib.js — git() and gitSafe() wrappers around execSync
+- Usage: `spl git checkpoint . "intent headline"`
 
 ## Implementation Patterns (project 14+)
 - P1: Uniform Factory — default export, takes execDoc, returns operator
@@ -175,10 +190,10 @@
    (42 checkable requirements). Referenced into projects.
    Adoption roadmap: evaluator → convention → protocol.
    Natural flow over enforcement.
-4. mc.git protocol + changelog view — formalize git
-   operations into a protocol, changelog as view over
-   git data (not separate storage). Impacts mc.raw
-   compound ops (move/copy need git awareness).
+4. ~~git protocol + evaluator compliance~~ (project 17, done)
+   git/checkpoint (smart commit), git/status, git/log,
+   git/changelog (reverse changelog). Evaluator process
+   compliance through cascading references. 80 tests.
 5. mc.raw compound operations (move, copy) — git-aware
 6. Stream consumers for exec data — simple processing first
 7. Model + spawn protocol (capstone) — model/ folder as
@@ -189,6 +204,15 @@
    Spawn analyzes model, builds install package, seeds
    new git repo. Foundation for multi-repository.
    Every spawned repo is autonomous but governable by parent.
+
+## Discover Protocol (seed — next project)
+- Semantic layer: understanding on demand, not just data access
+- Two tiers: direct tools (fast, local) + discover (rich, resolved)
+- mc.* protocols get buried behind conversation-level protocols
+- Three protocol kinds: infrastructure (mc.*), tool (git, evaluate), conversation (discover)
+- Agent context = references (visibility) + protocol (capability) + required detail (preparation)
+- Mix and match: direct when sufficient, protocol when it adds value
+- Full thinking captured in mycelium/discover.md
 
 ## spl4 Exit Gate
 - Critical review of spl4 (like spl2 review that seeded spl3/spl4)
