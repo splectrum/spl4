@@ -124,6 +124,50 @@ child. Child discovers its referenced resources. Discovery
 is the common language for self-orientation across
 repositories.
 
+## Cost Model
+
+Discover operations run locally — node process, git
+commands, file reads, reference resolution. The expensive
+resource (AI context window) receives only the prepared
+result, not the raw source data.
+
+- **Most operations**: local CPU + disk I/O → small
+  result into context
+- **Intelligence operations**: local + one haiku call →
+  prepared result into context
+- **Without discover**: multiple reads of full files →
+  raw bulk into context
+
+The context window is protected by spending local
+processing. Multi-repository scales: discovering across
+three repos returns one prepared result, not three repos
+of raw content.
+
+## Focus Over Efficiency
+
+The goal is not the smallest context or cheapest run.
+The goal is focus: the agent sees exactly what it needs
+for the task, in the form it needs it. Nothing more,
+nothing less.
+
+Efficiency is the consequence, not the objective.
+Tailoring context to task is a meaning concern — deciding
+what information is relevant, how it should be prepared,
+what level of detail serves this specific purpose. That
+is splectrum's domain: expressing the right meaning for
+the right moment.
+
+If the context is perfectly tailored, it is small because
+irrelevant information was excluded by design. If the
+agent is focused, it is cheap because it doesn't waste
+cycles on things outside its scope.
+
+The tuning itself is creative work — curation, not
+optimisation. Deciding what an agent needs to see for a
+specific task is a design decision about meaning.
+
+This type of tuning is an essential part of Splectrum.
+
 ## Open Questions
 
 - Who writes required detail sections? Human? Build cycle?
