@@ -3,9 +3,9 @@
  *
  * Usage: spl git checkpoint <path> <intent>
  *
- * Stages all changes under path, gathers status + diff,
- * uses Claude to write a proper commit message from the
- * intent and actual changes, commits, pushes.
+ * Stages all repo changes, gathers status + diff, uses
+ * Claude to write a commit message from intent and actual
+ * changes, commits, pushes. Path scopes intent, not staging.
  *
  * A checkpoint is a rollback point.
  */
@@ -28,8 +28,8 @@ export default async function (execDoc) {
     const mcPath = execDoc.resolvePath(path);
     const fsPath = mcPath === '/' ? '.' : mcPath.slice(1);
 
-    // Stage first so diff --cached shows what will be committed
-    git(root, 'add', fsPath);
+    // Stage everything — checkpoint captures all repo changes
+    git(root, 'add', '.');
 
     // Gather context for the commit message
     const status = git(root, 'status', '--short');
