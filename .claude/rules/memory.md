@@ -14,7 +14,7 @@
 ## The Model (proven)
 - Record = key → content (opaque bytes)
 - Context = container of records (recursive)
-- Seven operations: list, read, create, update, del (+ flatten, move planned)
+- Seven operations: list, read, create, update, del, move (+ flatten planned)
 - Three layers: logical, capability, physical
 - Flat API, metadata-driven behavior, nearest distance
 - Changelog as sibling record, three modes
@@ -104,7 +104,7 @@
 - `.spl/proto/mc.xpath/resolve.js` — location resolver (layers, bucket)
 - `.spl/proto/mc.xpath/fs_cascading.js` — filesystem substrate library
 - `.spl/proto/mc.core/{list,read,create,update,del}.js` — five primitives (layer-aware)
-- `.spl/proto/mc.raw/{list,read,create,update,del}.js` — format layer
+- `.spl/proto/mc.raw/{list,read,create,update,del,move,copy}.js` — format layer + compound ops
 - `.spl/proto/mc.data/{list,read,create,update,del}.js` — user data view
 - `.spl/proto/mc.meta/{list,read,create,update,del}.js` — metadata view
 - `.spl/proto/mc.exec/{lib,create,drop,complete,fail}.js` — execution state
@@ -164,6 +164,7 @@
 - git/log — structured commit history scoped to path
 - git/changelog — reverse changelog: derived markdown from git history
 - git/lib.js — git() and gitSafe() wrappers around execSync
+- Checkpoint always stages from repo root (git add .) — path scopes intent, not staging
 - Usage: `spl git checkpoint . "intent headline"`
 
 ## Implementation Patterns (project 14+)
@@ -194,7 +195,11 @@
    git/checkpoint (smart commit), git/status, git/log,
    git/changelog (reverse changelog). Evaluator process
    compliance through cascading references. 80 tests.
-5. mc.raw compound operations (move, copy) — git-aware
+5. ~~mc.raw compound operations~~ (project 18, done)
+   move (git mv, stages untracked first), copy (read + create + git add).
+   Checkpoint fix: always stages from repo root, not scoped path.
+   --follow for rename tracking deferred (design decision).
+   89 tests.
 6. Stream consumers for exec data — simple processing first
 7. Model + spawn protocol (capstone) — model/ folder as
    full mycelium install (autonomous, self-sufficient).
@@ -204,6 +209,12 @@
    Spawn analyzes model, builds install package, seeds
    new git repo. Foundation for multi-repository.
    Every spawned repo is autonomous but governable by parent.
+
+## Compound Operations (project 18)
+- mc.raw/move — git mv (stages untracked source first), rejects references
+- mc.raw/copy — mc.core/read + mc.core/create + git add, works through references
+- Asymmetry is correct: copy permissive (read anything), move restrictive (local only)
+- --follow for changelog rename tracking: open design decision (resource vs path)
 
 ## Discover Protocol (seed — next project)
 - Semantic layer: understanding on demand, not just data access
