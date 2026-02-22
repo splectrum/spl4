@@ -1,0 +1,277 @@
+# Mycelium Model
+
+Mycelium is a data interaction model. It defines how
+data is structured, accessed, and behaved — independent
+of where or how data is physically stored or transmitted.
+
+## The Primitive
+
+**Record** = key → content (opaque bytes).
+
+**Context** = bounded area that contains data structures.
+Records can themselves be contexts.
+
+Keys are meaningful only within their containing context.
+Content is opaque — the model does not interpret it.
+Everything else (typing, hashing, references, meaning)
+is layered above.
+
+This primitive was proven sufficient across 18 projects
+spanning storage, changelog, traversal, evaluation,
+protocol architecture, and compound operations.
+No extensions were required.
+
+## Operations
+
+| Operation | Category | Description |
+|---|---|---|
+| list | read | Keys in a context |
+| read | read | Content of a record |
+| create | write | New record |
+| update | write | Overwrite existing record |
+| del | write | Remove a record |
+| move | compound | Relocate across contexts (read + create + del) |
+| copy | compound | Duplicate across contexts (read + create) |
+
+Compound operations compose from primitives. The
+operation set is minimal and complete.
+
+Flatten (all keys recursively) is derived from recursive
+list, not a separate operation.
+
+## Three Layers
+
+**Logical** — Structures and operations. What exists
+and what you can do with it. Zero dependency on storage
+or substrate. Pure interface.
+
+**Capability** — Binds logical to physical. Implements
+the operations against a specific substrate. Multiple
+capabilities are interchangeable — same behavior,
+different backing.
+
+**Physical** — The substrate itself. Folders and files.
+A single JSON file. A database. An API. A network call.
+The physical layer has no opinions — it is whatever the
+capability wraps.
+
+The storage capability has zero knowledge of metadata,
+mutability, or behavior. It stores and retrieves bytes.
+All intelligence lives in the context layer above.
+
+## Context Layer
+
+The context layer sits between the logical interface
+and the storage capability. It provides:
+
+**Traversal** — Walk the path from root to target. At
+each segment, check for context definitions (metadata).
+Merge into accumulator. Nearest distance wins — inner
+context overrides outer.
+
+**Flat contexts** — A context marked flat means "my
+interior is content, not sub-contexts." Traversal hops
+over physical structure to the resource directly.
+
+**Metadata-driven behavior** — Mutability, changelog
+mode, and enforcement are driven by metadata accumulated
+during traversal. No flags, no configuration. Structure
+is behavior.
+
+**Metadata sources** — Transient (supplied at invocation)
+and stored (persisted as records in contexts). Both feed
+the same accumulation. Merge mode determines precedence
+when they conflict.
+
+## Changelog
+
+**Sibling record** — Changelog for `foo` is
+`foo.changelog`, a record in the same context. Visible,
+readable, flattenable. Not hidden metadata.
+
+**Three modes:**
+- **none** — no tracking (default; most records)
+- **resource-first** — resource is truth, log is audit
+- **log-first** — log is truth, resource is derived
+
+**Cascading** — A context's changelog aggregates its
+children's changelogs. Derived, not stored.
+
+**Delete behavior** — Depends on structure. If a bin
+sub-context exists, delete moves there. If not, delete
+is permanent. Structure determines behavior.
+
+## Behavioral Principles
+
+**Structure is behavior.** No flags, no configuration.
+A context with a bin has soft delete. A flat context
+skips interior traversal. A context with changelog mode
+tracks changes. What you build is how it behaves.
+
+**Nearest distance.** Definitions reside closest to
+their realization. A context's metadata lives in that
+context, not in a central registry. Inner overrides
+outer.
+
+**Data-triggered processing.** Data state drives
+progression. Each step reads inputs from records, writes
+outputs as records. Presence/absence determines what
+happens next. Stateless steps, data as checkpoint.
+
+**Resolution spectrum.** The same meaning at different
+granularity: natural language (opaque) → structured file
+(partially explicit) → individual records in contexts
+(fully explicit). All the same primitive at different
+resolution.
+
+## Point of View
+
+The working directory sets the **point of view** (POV).
+POV determines two things: what you can see, and how you
+identify it.
+
+### Resources and Functionality
+
+**Resources** — data you address and operate on — are
+relative to POV. You can only see what is in front of
+you. Paths go forward (into contexts below), never
+backward (above POV). A path is always relative to the
+current reference context.
+
+**Functionality** — protocol operations, modules, the
+proto map — is referenced to the repo root. Regardless
+of where you stand, all registered operations are
+available. You can use capabilities that live in the
+hidden part of the tree.
+
+This separation is structural: resources are scoped,
+functionality is global. An entity in `projects/` can
+invoke `evaluate/run` (functionality, root-registered)
+on `14-bug-fixes` (resource, relative to POV) but
+cannot address `../mycelium/model.md` (behind POV).
+
+### Paths as Identity
+
+Paths are primary keys. A key is meaningful only within
+its containing context — this is already a model
+primitive (§ The Primitive). POV extends this: the same
+resource has different paths from different viewpoints.
+
+From root: `projects/14-bug-fixes`
+From projects/: `14-bug-fixes`
+
+Both identify the same resource. The path is a
+context-relative URI — a scalable primary key that
+derives from position. Identity is not absolute; it is
+always relative to a reference context.
+
+### Cascading References
+
+When a resource is behind POV but access is required,
+**cascading references** bring it into view. A reference
+is a record in the current context that points to a
+resource elsewhere. The reference creates a local
+identity (path) for a remote resource.
+
+This means:
+- A resource can have multiple identities — one per
+  context that references it
+- Each identity is a valid PK within its context
+- References are the base level of permission: if you
+  can see a reference, you can follow it
+- No reference, no access — POV enforces the boundary
+
+References cascade: a context can reference a context
+that itself contains references. The graph of references
+defines the reachable set from any POV.
+
+### Implemented
+
+- `doc.prefix` — POV as CWD relative to root
+- `doc.resolvePath(path)` — resolve resource path from
+  POV to absolute mc path, rejecting escapes
+- Functionality paths (config.json module references)
+  remain root-relative
+- Resource paths in operator results are POV-relative
+
+### Not Yet Implemented
+
+- Cascading references (record type, traversal, graph)
+- Multiple UUID identity per resource
+- Reference-based permission model
+
+## Real vs Virtual Contexts
+
+A context is either real (physically present) or virtual
+(defined by type, not yet instantiated).
+
+- **Real** — exists physically. Has content, can be
+  operated on.
+- **Virtual** — defined in the parent's metadata as a
+  candidate for instantiation. A type with config that
+  isn't an instance yet.
+
+Creating = making a virtual context real. The virtual
+type in the parent determines what can be created. You
+cannot create a real context where no virtual of that
+kind exists.
+
+A parent context declares its virtual children in
+metadata. The `*` wildcard means any number of instances
+of this virtual type can become real.
+
+mc.xpath resolve returns real or error today. Virtual
+comes when type definitions are wired up.
+
+## Schemas (Direction)
+
+Records are opaque bytes — schemas give those bytes a
+contract. A schema is metadata on a context that describes
+the shape of its records.
+
+Graduated path:
+1. Convention — implicit shapes (e.g. config.json fields)
+2. Avro schemas as context metadata — co-located with
+   the data they describe, stored as records
+3. Avro RPC for protocol contracts — operations declare
+   input/output schemas, wire protocol for client-server
+4. Schema evolution — Avro compatibility rules for
+   evolving structures without breaking consumers
+
+avsc (pure JS Avro implementation) — proven in spl2.
+
+## Physical Layer (Direction)
+
+Current substrate: Node.js filesystem. Future: Bare
+runtime for Pear P2P platform (Hypercore/Hyperbee as
+storage, Hyperswarm for connectivity).
+
+Transition from Node to Bare is mainly package.json
+import maps for library switching. Current code uses
+minimal Node built-ins (fs, path, url, crypto).
+
+The three-layer model already anticipates this —
+same logical model, different capability and physical
+layers. Avro schemas enforce contracts over P2P wire
+protocols (Bare + Hypercore + avsc).
+
+## Scripting Semantics (Direction)
+
+Seamless error handling at the logical scripting level.
+No try/catch, no if/else. Error handling as expression
+syntax:
+
+    dosomething(mc.xpath(...)) or dosomethingelse()
+
+The happy path and fallback are at the same syntactic
+level. Errors propagate naturally through pipelines.
+Fallbacks compose:
+
+    do(x) or do(y) or do(z)
+
+The "or" pattern is the fundamental error handling
+primitive at the scripting level. This shapes API
+design: operations that fail produce errors that flow
+to the next alternative.
+
+Designed, not yet built.
