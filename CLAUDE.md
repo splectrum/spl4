@@ -1,5 +1,15 @@
 # CLAUDE.md — Splectrum (spl4)
 
+## Sunset
+
+This iteration is complete. spl4 proved the integration
+of the Mycelium model with practical tool use across 18
+projects: uniform factory pattern, protocol architecture
+(41 operations, 14 protocols), cascading references,
+quality gates, compound operations.
+
+Work continues in [spl5](https://github.com/splectrum/spl5).
+
 ## What This Is
 
 Splectrum is a living meaning system where entities
